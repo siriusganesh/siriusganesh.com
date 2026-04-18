@@ -7,6 +7,7 @@ import {
   capabilities,
   projects,
   aboutParagraphsHtml,
+  aboutPhoto,
   contactHtml,
 } from '../data/content';
 ---
@@ -76,6 +77,11 @@ import {
 
     {projects.map((p) => (
       <div class="project-card">
+        {p.image && (
+          <div class="project-image">
+            <img src={p.image.src} alt={p.image.alt} loading="lazy" />
+          </div>
+        )}
         <h3>{p.title}</h3>
         <p set:html={p.descriptionHtml}></p>
         <div class="stack">{p.metaLine}</div>
@@ -94,7 +100,15 @@ import {
       <h2>About</h2>
       <span class="meta">off the clock</span>
     </header>
-    {aboutParagraphsHtml.map((p) => <p set:html={p}></p>)}
+    <div class="about-grid">
+      <div class="about-text">
+        {aboutParagraphsHtml.map((p) => <p set:html={p}></p>)}
+      </div>
+      <figure class="about-photo">
+        <img src={aboutPhoto.src} alt={aboutPhoto.alt} loading="lazy" />
+        <figcaption>{aboutPhoto.caption}</figcaption>
+      </figure>
+    </div>
   </section>
 
   <section class="block" id="contact">

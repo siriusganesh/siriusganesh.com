@@ -118,6 +118,7 @@ export type Project = {
   title: string;
   descriptionHtml: string;
   metaLine: string; // the small mono line beneath, e.g. "Role: X · stack · tags"
+  image?: { src: string; alt: string }; // optional banner image above the card content
 };
 
 export const projects: Project[] = [
@@ -145,8 +146,19 @@ export const projects: Project[] = [
       install time from 2 weeks to 2 days.
     `,
     metaLine: "Role: Manager, Deployment Engineering · 9 sites · 15+ robotic systems",
+    image: {
+      src: "/images/pickle-wide.jpg",
+      alt: "Pickle Robot autonomous truck-unloading robot",
+    },
   },
 ];
+
+// Optional About section portrait. Rendered alongside the paragraphs.
+export const aboutPhoto = {
+  src: "/images/sirius-wife.jpg",
+  alt: "Sirius with his wife at Dream Lake, Rocky Mountain National Park",
+  caption: "Dream Lake, RMNP",
+};
 
 // Paragraphs on the About section. Inline HTML allowed.
 export const aboutParagraphsHtml: string[] = [
