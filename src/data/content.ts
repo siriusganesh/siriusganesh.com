@@ -26,9 +26,10 @@ export const ledeHtml = `
   with the operational discipline to deliver automation programs reliably.
 `;
 
-// Hero portrait. Small photo beside the intro. Kept intentionally informal.
+// Hero portrait. Photo beside the intro. Pre-cropped to keep Dream Lake
+// backdrop while focusing on the couple.
 export const heroPortrait = {
-  src: "/images/sirius-wife.jpg",
+  src: "/images/sirius-wife-hero.jpg",
   alt: "Sirius with his wife at Dream Lake, Rocky Mountain National Park",
 };
 
@@ -48,8 +49,8 @@ export const experience: ExperienceEntry[] = [
     location: "Denver, CO",
     when: "JAN 2025 — PRESENT",
     image: {
-      src: "/images/pickle-wide.jpg",
-      alt: "Pickle Robot autonomous truck-unloading robot",
+      src: "/images/pickle-banner.jpg",
+      alt: "Pickle Robot — Physical AI for Supply Chain Automation (gripper)",
     },
     bulletsHtml: [
       "Manage a team of 7 deployment engineers — hiring, performance, and development — across 9 active customer sites running autonomous truck-unloading robots.",
@@ -64,6 +65,10 @@ export const experience: ExperienceEntry[] = [
     org: "Geek+ Robotics",
     location: "San Diego, CA",
     when: "AUG 2023 — JAN 2025",
+    image: {
+      src: "/images/geekplus-banner.jpg",
+      alt: "Geek+ — One-Stop Partner For Warehouse Robotics",
+    },
     bulletsHtml: [
       "Advised enterprise customers on AMR deployments, including <strong>UPS Happy Returns' first automated returns hub</strong> (150 robots) — reduced return processing time by 35%.",
       "Designed and executed testing strategies for fleet management systems: RESTful API integrations and UAT, hitting 100% SLA compliance at go-live.",
