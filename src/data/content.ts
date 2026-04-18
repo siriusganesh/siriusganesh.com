@@ -277,8 +277,8 @@ export type AboutTile =
 export const aboutGallery: AboutTile[] = [
   {
     kind: "photo",
-    src: "/images/espresso-crema.jpg",
-    alt: "Latte art on a Lelit espresso machine",
+    src: "/images/espresso.jpg",
+    alt: "Espresso pull on a Lelit machine",
     label: "Espresso",
     caption: "Lelit · chasing the god shot",
   },
