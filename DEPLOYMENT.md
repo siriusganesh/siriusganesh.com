@@ -34,7 +34,8 @@ git push -u origin main
    - **Build command**: `npm run build`
    - **Build output directory**: `dist`
 5. Under **Environment variables**, add:
-   - `NODE_VERSION` = `20`
+   - `NODE_VERSION` = `22`
+   (Astro 6 requires Node >= 22.12; Node 20 fails the build.)
 6. Click **Save and Deploy**
 
 First build takes 1–2 minutes. You'll get a URL like

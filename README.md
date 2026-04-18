@@ -57,7 +57,7 @@ For tiny updates (resume swap, typo fix) you can just push straight to `main`.
 - Framework preset: **Astro**
 - Build command: `npm run build`
 - Build output directory: `dist`
-- Node version: `20` (set in Pages → Settings → Environment variables:
-  `NODE_VERSION=20`)
+- Node version: `22` (set in Pages → Settings → Environment variables:
+  `NODE_VERSION=22`) — Astro 6 requires Node >= 22.12
 
 See `DEPLOYMENT.md` for the one-time setup walkthrough.
