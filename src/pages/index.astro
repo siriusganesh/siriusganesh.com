@@ -3,25 +3,37 @@ import Base from '../layouts/Base.astro';
 import {
   profile,
   ledeHtml,
+  heroPortrait,
   experience,
+  educationBanner,
+  school,
+  research,
   capabilities,
-  projects,
+  press,
   aboutParagraphsHtml,
+  aboutGallery,
   contactHtml,
 } from '../data/content';
 ---
 <Base>
   <section class="hero">
-    <span class="overline">{profile.overline}</span>
-    <h1>{profile.name}<span class="accent">.</span></h1>
-    <p class="lede" set:html={ledeHtml}></p>
+    <div class="hero-grid">
+      <div class="hero-text">
+        <span class="overline">{profile.overline}</span>
+        <h1>{profile.name}<span class="accent">.</span></h1>
+        <p class="lede" set:html={ledeHtml}></p>
 
-    <div class="meta-row">
-      <span class="pin">{profile.location}</span>
-      <span class="pin"><a href={`mailto:${profile.email}`}>{profile.email}</a></span>
-      <span class="pin"><a href={profile.linkedin} target="_blank" rel="noreferrer">linkedin</a></span>
-      <span class="pin"><a href={profile.github} target="_blank" rel="noreferrer">github</a></span>
-      <span class="pin"><a href={profile.resumeUrl} target="_blank" rel="noreferrer">resume</a></span>
+        <div class="meta-row">
+          <span class="pin">{profile.location}</span>
+          <span class="pin"><a href={`mailto:${profile.email}`}>{profile.email}</a></span>
+          <span class="pin"><a href={profile.linkedin} target="_blank" rel="noreferrer">linkedin</a></span>
+          <span class="pin"><a href={profile.github} target="_blank" rel="noreferrer">github</a></span>
+          <span class="pin"><a href={profile.resumeUrl} target="_blank" rel="noreferrer">resume</a></span>
+        </div>
+      </div>
+      <figure class="hero-portrait">
+        <img src={heroPortrait.src} alt={heroPortrait.alt} loading="eager" />
+      </figure>
     </div>
   </section>
 
@@ -36,6 +48,11 @@ import {
 
     {experience.map((job) => (
       <div class="experience-item">
+        {job.image && (
+          <div class="experience-image">
+            <img src={job.image.src} alt={job.image.alt} loading="lazy" />
+          </div>
+        )}
         <div>
           <span class="role">{job.role}</span> ·
           <span class="org">{job.org} · {job.location}</span>
@@ -48,9 +65,66 @@ import {
     ))}
   </section>
 
-  <section class="block" id="capabilities">
+  <section class="block" id="education">
     <header>
       <span class="num">[ 02 ]</span>
+      <h2>Education &amp; research</h2>
+      <span class="meta">{school.when}</span>
+    </header>
+
+    <figure class="edu-banner">
+      <img src={educationBanner.src} alt={educationBanner.alt} loading="lazy" />
+    </figure>
+
+    <div class="school-block">
+      <div class="school-head">
+        <div>
+          <span class="school-name">{school.name}</span>
+          <div class="school-degree">{school.degree}</div>
+          <div class="school-detail">{school.detail}</div>
+        </div>
+        <span class="when">{school.when}</span>
+      </div>
+      <ul class="school-highlights">
+        {school.highlightsHtml.map((h) => <li set:html={h}></li>)}
+      </ul>
+    </div>
+
+    <h3 class="subsection-label">Research</h3>
+    {research.slice(0, 2).map((r) => (
+      <div class="research-item">
+        <div class="research-head">
+          <span class="research-title">{r.title}</span>
+          <span class="when">{r.when}</span>
+        </div>
+        <p set:html={r.descriptionHtml}></p>
+        <div class="stack">{r.citation}</div>
+      </div>
+    ))}
+
+    {research.length > 2 && (
+      <details class="research-more">
+        <summary>
+          <span class="more-label">Show {research.length - 2} more</span>
+          <span class="less-label">Show less</span>
+        </summary>
+        {research.slice(2).map((r) => (
+          <div class="research-item">
+            <div class="research-head">
+              <span class="research-title">{r.title}</span>
+              <span class="when">{r.when}</span>
+            </div>
+            <p set:html={r.descriptionHtml}></p>
+            <div class="stack">{r.citation}</div>
+          </div>
+        ))}
+      </details>
+    )}
+  </section>
+
+  <section class="block" id="capabilities">
+    <header>
+      <span class="num">[ 03 ]</span>
       <h2>Capabilities</h2>
       <span class="meta">what I do</span>
     </header>
@@ -67,39 +141,68 @@ import {
     </div>
   </section>
 
-  <section class="block" id="projects">
+  <section class="block" id="press">
     <header>
-      <span class="num">[ 03 ]</span>
-      <h2>Selected projects</h2>
-      <span class="meta">case studies</span>
+      <span class="num">[ 04 ]</span>
+      <h2>Press &amp; case studies</h2>
+      <span class="meta">external coverage</span>
     </header>
 
-    {projects.map((p) => (
-      <div class="project-card">
-        <h3>{p.title}</h3>
+    {press.map((p) => (
+      <article class="press-card">
+        {p.image && (
+          <div class="project-image">
+            <img src={p.image.src} alt={p.image.alt} loading="lazy" />
+          </div>
+        )}
+        <h3>
+          {p.href ? (
+            <a href={p.href} target="_blank" rel="noreferrer">
+              {p.title} <span class="ext-arrow" aria-hidden="true">↗</span>
+            </a>
+          ) : (
+            p.title
+          )}
+        </h3>
         <p set:html={p.descriptionHtml}></p>
         <div class="stack">{p.metaLine}</div>
-      </div>
+      </article>
     ))}
-
-    <p class="dim" style="margin-top: 1.25rem; font-size: 0.85rem;">
-      <em>More to add: specific site retros, failure post-mortems, and a public-friendly
-      write-up of the deployment playbook once NDA scope is sorted.</em>
-    </p>
   </section>
 
   <section class="block" id="about">
     <header>
-      <span class="num">[ 04 ]</span>
+      <span class="num">[ 05 ]</span>
       <h2>About</h2>
       <span class="meta">off the clock</span>
     </header>
-    {aboutParagraphsHtml.map((p) => <p set:html={p}></p>)}
+    <div class="about-text">
+      {aboutParagraphsHtml.map((p) => <p set:html={p}></p>)}
+    </div>
+    <div class="about-gallery">
+      {aboutGallery.map((tile) => (
+        tile.kind === "photo" ? (
+          <figure class="about-tile photo">
+            <img src={tile.src} alt={tile.alt} loading="lazy" />
+            <figcaption>
+              <span class="tile-label">{tile.label}</span>
+              <span class="tile-caption">{tile.caption}</span>
+            </figcaption>
+          </figure>
+        ) : (
+          <div class="about-tile text">
+            <span class="tile-label">{tile.label}</span>
+            <span class="tile-headline">{tile.headline}</span>
+            <span class="tile-caption">{tile.caption}</span>
+          </div>
+        )
+      ))}
+    </div>
   </section>
 
   <section class="block" id="contact">
     <header>
-      <span class="num">[ 05 ]</span>
+      <span class="num">[ 06 ]</span>
       <h2>Contact</h2>
     </header>
     <p set:html={contactHtml}></p>
