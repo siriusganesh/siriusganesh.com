@@ -239,12 +239,23 @@ export type PressItem = {
 
 export const press: PressItem[] = [
   {
+    title: "Robots that spare warehouse workers the heavy lifting",
+    descriptionHtml: `
+      MIT News company feature on Pickle Robot — the autonomous truck-unloading
+      platform I lead customer deployments for. Profiles the MIT-alum founding
+      team and covers the product's current customer set, including UPS and
+      Yusen Logistics.
+    `,
+    metaLine: "MIT News · Pickle Robot company feature · December 2025",
+    href: "https://news.mit.edu/2025/robots-spare-warehouse-workers-heavy-lifting-1205",
+  },
+  {
     title: "How UPS + Happy Returns is making customer returns easy",
     descriptionHtml: `
       UPS feature on the first fully automated returns processing hub — 150 Geek+ AMRs
       I advised on as Systems Consultant. Return processing time down 35%.
     `,
-    metaLine: "UPS Newsroom · Happy Returns · 150-robot AMR deployment",
+    metaLine: "UPS Newsroom · Happy Returns · 150-robot AMR deployment · January 2025",
     href: "https://about.ups.com/us/en/our-stories/customer-first/how-we-re-making-customer-returns-easy--happy-returns-x-ups.html",
   },
   {
@@ -254,7 +265,7 @@ export const press: PressItem[] = [
       I directed planning, scheduling, and budgeting as Deployment Manager.
       Storage capacity optimized by 30%.
     `,
-    metaLine: "UPS Newsroom · Velocity · 700+ robot fleet · $40M+ program",
+    metaLine: "UPS Newsroom · Velocity · 700+ robot fleet · $40M+ program · April 2024",
     href: "https://about.ups.com/us/en/our-stories/innovation-driven/5-ways-the-new-ups-velocity-facility-orchestrates-.html",
   },
 ];
