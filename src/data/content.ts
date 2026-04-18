@@ -115,6 +115,7 @@ export const school: School = {
   highlightsHtml: [
     "Dean's List, College of Engineering",
     "Research Assistant, Energy Transport Research Lab (ETRL) — Prof. Nenad Miljkovic's group",
+    "American Mensa — Area Coordinator, Champaign County",
   ],
 };
 
@@ -258,20 +259,49 @@ export const press: PressItem[] = [
   },
 ];
 
-// Paragraphs on the About section. Inline HTML allowed.
-// UIUC credentials moved to the Education section.
+// About section paragraphs — genuinely off-the-clock. Career/P&L talk
+// belongs in Experience, not here.
 export const aboutParagraphsHtml: string[] = [
-  `I work at the intersection of hardware, software, and operations — where robots stop
-   being demos and start running somebody's P&L. My focus is the last mile of automation:
-   the part where a novel system has to survive a real facility, a real workforce, and
-   a real 3am shift change.`,
-  `The career arc covers both ends of the maturity curve. <strong>Pickle Robot</strong>
-   is 0-to-1 — architecture-defining decisions, operating with ambiguity, deep technical
-   ownership. <strong>Geek+</strong> was scale — multi-site rollouts, process maturity,
-   enterprise customers. The combination I optimize for: innovate like a startup, execute
-   like an enterprise.`,
-  `Outside work: espresso (still chasing the god shot), RC aviation (EDF jets and
-   collective-pitch helis), and American Mensa Area Coordinator for Champaign County.`,
+  `Off the clock: espresso (still chasing the god shot on a Lelit), RC aviation
+   (EDF jets and collective-pitch helis), and as much Colorado Rockies trail time as
+   the calendar allows. <strong>Maple</strong> — our golden retriever and unofficial
+   chief morale officer — shows up on most of the good ones.`,
+];
+
+// Gallery tiles for the About section. Mix of photo tiles and one text tile
+// for RC aviation (no photo yet).
+export type AboutTile =
+  | { kind: "photo"; src: string; alt: string; label: string; caption: string }
+  | { kind: "text"; label: string; headline: string; caption: string };
+
+export const aboutGallery: AboutTile[] = [
+  {
+    kind: "photo",
+    src: "/images/espresso-crema.jpg",
+    alt: "Latte art on a Lelit espresso machine",
+    label: "Espresso",
+    caption: "Lelit · chasing the god shot",
+  },
+  {
+    kind: "photo",
+    src: "/images/maple-nyc.jpg",
+    alt: "Maple the golden retriever in Times Square, NYC",
+    label: "Maple",
+    caption: "Golden retriever · chief morale officer",
+  },
+  {
+    kind: "photo",
+    src: "/images/aspen-lake.jpg",
+    alt: "Aspen trees in fall color along a Rocky Mountain lake",
+    label: "Rockies",
+    caption: "Aspens and alpine lakes, Colorado",
+  },
+  {
+    kind: "text",
+    label: "RC aviation",
+    headline: "EDF jets &\ncollective-pitch helis",
+    caption: "Respect the rotor disc.",
+  },
 ];
 
 // Contact paragraph. Inline HTML allowed.

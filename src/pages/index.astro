@@ -11,6 +11,7 @@ import {
   capabilities,
   press,
   aboutParagraphsHtml,
+  aboutGallery,
   contactHtml,
 } from '../data/content';
 ---
@@ -177,6 +178,25 @@ import {
     </header>
     <div class="about-text">
       {aboutParagraphsHtml.map((p) => <p set:html={p}></p>)}
+    </div>
+    <div class="about-gallery">
+      {aboutGallery.map((tile) => (
+        tile.kind === "photo" ? (
+          <figure class="about-tile photo">
+            <img src={tile.src} alt={tile.alt} loading="lazy" />
+            <figcaption>
+              <span class="tile-label">{tile.label}</span>
+              <span class="tile-caption">{tile.caption}</span>
+            </figcaption>
+          </figure>
+        ) : (
+          <div class="about-tile text">
+            <span class="tile-label">{tile.label}</span>
+            <span class="tile-headline">{tile.headline}</span>
+            <span class="tile-caption">{tile.caption}</span>
+          </div>
+        )
+      ))}
     </div>
   </section>
 
