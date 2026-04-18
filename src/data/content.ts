@@ -38,6 +38,7 @@ export type ExperienceEntry = {
   location: string;
   when: string;         // e.g. "JAN 2025 — PRESENT"
   bulletsHtml: string[]; // inline HTML allowed in each bullet
+  image?: { src: string; alt: string }; // optional banner image at top of entry
 };
 
 export const experience: ExperienceEntry[] = [
@@ -46,6 +47,10 @@ export const experience: ExperienceEntry[] = [
     org: "Pickle Robot Company",
     location: "Denver, CO",
     when: "JAN 2025 — PRESENT",
+    image: {
+      src: "/images/pickle-wide.jpg",
+      alt: "Pickle Robot autonomous truck-unloading robot",
+    },
     bulletsHtml: [
       "Manage a team of 7 deployment engineers — hiring, performance, and development — across 9 active customer sites running autonomous truck-unloading robots.",
       "Reduced per-site deployment time from 2 weeks to 2 days by standardizing deployment playbooks, networking infrastructure protocols, and customer training programs.",
@@ -116,28 +121,61 @@ export type ResearchEntry = {
   href?: string;
 };
 
-// Two co-authored papers from the ETRL research period.
+// Four co-authored papers from the ETRL research period. First two render by
+// default; the rest live behind a "show more" expand on the page.
 export const research: ResearchEntry[] = [
   {
-    title: "Breaking droplet jumping energy conversion limits with superhydrophobic microgrooves",
+    title: "Breaking Droplet Jumping Energy Conversion Limits with Superhydrophobic Microgrooves",
     when: "SEP 2019 — MAY 2021",
     descriptionHtml: `
       Investigated how hierarchical microgrooved superhydrophobic surfaces influence
       droplet coalescence and jumping dynamics. Showed that groove structures enhance
-      velocity and energy conversion efficiency nearly 2×.
+      velocity and energy conversion efficiency nearly 2× and 6× higher, respectively,
+      than smooth surfaces, by controlling coalescence hydrodynamics. Findings highlight
+      how macroscale structures can be engineered to improve performance in applications
+      like condensation heat transfer, self-cleaning, and anti-icing.
     `,
     citation: "Langmuir 2020, 36, 32, 9510–9522",
   },
   {
-    title: "Droplet jumping: effects of droplet size, surface structure, pinning, and liquid properties",
+    title: "Droplet Jumping: Effects of Droplet Size, Surface Structure, Pinning, and Liquid Properties",
     when: "SEP 2019 — MAY 2021",
     descriptionHtml: `
       Developed a microdroplet visualization technique to study droplet jumping dynamics
       on nanostructured superhydrophobic, hierarchical superhydrophobic, and biphilic
-      surfaces. Demonstrated how droplet size, pinning, and fluid properties govern
-      jump behavior.
+      surfaces. Demonstrated how droplet size mismatch, surface structure, and liquid
+      properties affect jumping velocity and direction, validating inertial-capillary
+      scaling across diverse condensates. Provides new insights into fluid–substrate
+      interactions and guides surface design for anti-icing, water harvesting, and
+      thermal management.
     `,
     citation: "ACS Nano 2019, 13, 2, 1309–1323",
+  },
+  {
+    title: "How Superhydrophobic Grooves Drive Single-Droplet Jumping",
+    when: "SEP 2019 — MAY 2021",
+    descriptionHtml: `
+      Explored a novel droplet-shedding mechanism that enhances self-cleaning, anti-icing,
+      water-harvesting, and heat-transfer surfaces. Using simulations and experiments,
+      demonstrated how groove geometry and Laplace pressure drive single-droplet jumping
+      with departure velocities over 3× higher than conventional methods. Developed a
+      regime map for predicting jumping behavior and showed how surface design can
+      control droplet direction and performance.
+    `,
+    citation: "Langmuir 2022, 38, 14, 4452–4460",
+  },
+  {
+    title: "Laplace Pressure Driven Single-Droplet Jumping on Structured Surfaces",
+    when: "SEP 2019 — MAY 2021",
+    descriptionHtml: `
+      Studied how droplets move and shed from surfaces, a process critical to biofluidics,
+      anti-icing, water harvesting, and electronics cooling. Developed a novel
+      groove-based surface design that enables droplets to "jump" with velocities up to
+      3–4× higher than conventional methods. Demonstrated precise control over droplet
+      speed, direction, and size, and applied this mechanism to improve steam condensation
+      efficiency.
+    `,
+    citation: "ACS Nano 2020, 14, 10, 12796–12809",
   },
 ];
 
@@ -212,19 +250,6 @@ export const press: PressItem[] = [
     `,
     metaLine: "UPS Newsroom · Velocity · 700+ robot fleet · $40M+ program",
     href: "https://about.ups.com/us/en/our-stories/innovation-driven/5-ways-the-new-ups-velocity-facility-orchestrates-.html",
-  },
-  {
-    title: "Pickle Robot — deployment playbook v3",
-    descriptionHtml: `
-      Built the standardized deployment process now used across Pickle's customer base:
-      networking protocols, site prep, commissioning, and operator training. Per-site
-      install time from 2 weeks to 2 days.
-    `,
-    metaLine: "Internal · 9 sites · 15+ robotic systems",
-    image: {
-      src: "/images/pickle-wide.jpg",
-      alt: "Pickle Robot autonomous truck-unloading robot",
-    },
   },
 ];
 

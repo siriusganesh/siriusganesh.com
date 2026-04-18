@@ -47,6 +47,11 @@ import {
 
     {experience.map((job) => (
       <div class="experience-item">
+        {job.image && (
+          <div class="experience-image">
+            <img src={job.image.src} alt={job.image.alt} loading="lazy" />
+          </div>
+        )}
         <div>
           <span class="role">{job.role}</span> ·
           <span class="org">{job.org} · {job.location}</span>
@@ -85,7 +90,7 @@ import {
     </div>
 
     <h3 class="subsection-label">Research</h3>
-    {research.map((r) => (
+    {research.slice(0, 2).map((r) => (
       <div class="research-item">
         <div class="research-head">
           <span class="research-title">{r.title}</span>
@@ -95,6 +100,25 @@ import {
         <div class="stack">{r.citation}</div>
       </div>
     ))}
+
+    {research.length > 2 && (
+      <details class="research-more">
+        <summary>
+          <span class="more-label">Show {research.length - 2} more</span>
+          <span class="less-label">Show less</span>
+        </summary>
+        {research.slice(2).map((r) => (
+          <div class="research-item">
+            <div class="research-head">
+              <span class="research-title">{r.title}</span>
+              <span class="when">{r.when}</span>
+            </div>
+            <p set:html={r.descriptionHtml}></p>
+            <div class="stack">{r.citation}</div>
+          </div>
+        ))}
+      </details>
+    )}
   </section>
 
   <section class="block" id="capabilities">

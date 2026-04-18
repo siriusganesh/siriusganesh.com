@@ -183,14 +183,13 @@ nav.topnav a:hover { color: var(--navy); }
 
 .hero-grid {
   display: grid;
-  grid-template-columns: 1fr 200px;
+  grid-template-columns: 1fr 300px;
   gap: 2.5rem;
-  align-items: start;
+  align-items: center;
 }
 
 .hero-portrait {
   margin: 0;
-  margin-top: 2.5rem; /* roughly align with name baseline */
 }
 
 .hero-portrait img {
@@ -290,6 +289,22 @@ section.block > header .meta {
 
 .experience-item ul li { margin-bottom: 0.35rem; }
 .experience-item ul li::marker { color: var(--navy); }
+
+.experience-item .experience-image {
+  grid-column: 1 / -1;
+  margin: 0 0 1rem 0;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: #000;
+}
+
+.experience-item .experience-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
 
 /* ========== EDUCATION ========== */
 .edu-banner {
@@ -405,6 +420,39 @@ section.block > header .meta {
   font-size: 0.72rem;
   color: var(--text-faint);
   letter-spacing: 0.04em;
+}
+
+/* Progressive-disclosure "show more" expand for extra research entries */
+.research-more { margin-top: 0.5rem; }
+
+.research-more > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--navy);
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--navy-soft);
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.research-more > summary::-webkit-details-marker { display: none; }
+.research-more > summary:hover {
+  color: var(--navy-deep);
+  border-bottom-color: var(--navy-deep);
+}
+
+.research-more > summary .more-label::before { content: "+ "; }
+.research-more > summary .less-label::before { content: "− "; }
+.research-more > summary .less-label { display: none; }
+.research-more[open] > summary .more-label { display: none; }
+.research-more[open] > summary .less-label { display: inline; }
+
+.research-more[open] > summary {
+  margin-bottom: 0.5rem;
 }
 
 /* ========== CAPABILITIES ========== */
