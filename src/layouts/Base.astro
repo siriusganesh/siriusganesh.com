@@ -1,0 +1,55 @@
+---
+import '../styles/global.css';
+interface Props {
+  title?: string;
+  description?: string;
+}
+const {
+  title = 'Sirius Ganesh — Deployment Engineering · Warehouse Robotics',
+  description = 'Sirius Ganesh — Deployment engineering leader scaling warehouse robotics from startup pilot to enterprise production. Pickle Robot · Geek+ · AMR fleets · systems integration.',
+} = Astro.props;
+const today = new Date();
+const docDate = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://siriusganesh.com/" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap"
+    />
+    <title>{title}</title>
+  </head>
+  <body>
+    <nav class="topnav">
+      <div class="wrap">
+        <a href="/" class="brand">sirius ganesh</a>
+        <ul>
+          <li><a href="#experience">01 experience</a></li>
+          <li><a href="#capabilities">02 capabilities</a></li>
+          <li><a href="#projects">03 projects</a></li>
+          <li><a href="#contact">04 contact</a></li>
+        </ul>
+      </div>
+    </nav>
+    <main class="page">
+      <slot />
+    </main>
+    <footer class="page-footer">
+      <span>{docDate}</span>
+      <span>sirius ganesh · denver, co</span>
+      <span>v1.0</span>
+    </footer>
+  </body>
+</html>

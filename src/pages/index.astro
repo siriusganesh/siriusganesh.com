@@ -1,0 +1,107 @@
+---
+import Base from '../layouts/Base.astro';
+import {
+  profile,
+  ledeHtml,
+  experience,
+  capabilities,
+  projects,
+  aboutParagraphsHtml,
+  contactHtml,
+} from '../data/content';
+---
+<Base>
+  <section class="hero">
+    <span class="overline">{profile.overline}</span>
+    <h1>{profile.name}<span class="accent">.</span></h1>
+    <p class="lede" set:html={ledeHtml}></p>
+
+    <div class="meta-row">
+      <span class="pin">{profile.location}</span>
+      <span class="pin"><a href={`mailto:${profile.email}`}>{profile.email}</a></span>
+      <span class="pin"><a href={profile.linkedin} target="_blank" rel="noreferrer">linkedin</a></span>
+      <span class="pin"><a href={profile.github} target="_blank" rel="noreferrer">github</a></span>
+      <span class="pin"><a href={profile.resumeUrl} target="_blank" rel="noreferrer">resume</a></span>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section class="block" id="experience">
+    <header>
+      <span class="num">[ 01 ]</span>
+      <h2>Experience</h2>
+      <span class="meta">2021 — present</span>
+    </header>
+
+    {experience.map((job) => (
+      <div class="experience-item">
+        <div>
+          <span class="role">{job.role}</span> ·
+          <span class="org">{job.org} · {job.location}</span>
+        </div>
+        <span class="when">{job.when}</span>
+        <ul>
+          {job.bulletsHtml.map((b) => <li set:html={b}></li>)}
+        </ul>
+      </div>
+    ))}
+  </section>
+
+  <section class="block" id="capabilities">
+    <header>
+      <span class="num">[ 02 ]</span>
+      <h2>Capabilities</h2>
+      <span class="meta">what I do</span>
+    </header>
+
+    <div class="capability-grid">
+      {capabilities.map((group) => (
+        <div>
+          <h3>{group.title}</h3>
+          <ul>
+            {group.items.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="block" id="projects">
+    <header>
+      <span class="num">[ 03 ]</span>
+      <h2>Selected projects</h2>
+      <span class="meta">case studies</span>
+    </header>
+
+    {projects.map((p) => (
+      <div class="project-card">
+        <h3>{p.title}</h3>
+        <p set:html={p.descriptionHtml}></p>
+        <div class="stack">{p.metaLine}</div>
+      </div>
+    ))}
+
+    <p class="dim" style="margin-top: 1.25rem; font-size: 0.85rem;">
+      <em>More to add: specific site retros, failure post-mortems, and a public-friendly
+      write-up of the deployment playbook once NDA scope is sorted.</em>
+    </p>
+  </section>
+
+  <section class="block" id="about">
+    <header>
+      <span class="num">[ 04 ]</span>
+      <h2>About</h2>
+      <span class="meta">off the clock</span>
+    </header>
+    {aboutParagraphsHtml.map((p) => <p set:html={p}></p>)}
+  </section>
+
+  <section class="block" id="contact">
+    <header>
+      <span class="num">[ 05 ]</span>
+      <h2>Contact</h2>
+    </header>
+    <p set:html={contactHtml}></p>
+  </section>
+</Base>
