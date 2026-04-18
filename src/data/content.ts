@@ -26,6 +26,12 @@ export const ledeHtml = `
   with the operational discipline to deliver automation programs reliably.
 `;
 
+// Hero portrait. Small photo beside the intro. Kept intentionally informal.
+export const heroPortrait = {
+  src: "/images/sirius-wife.jpg",
+  alt: "Sirius with his wife at Dream Lake, Rocky Mountain National Park",
+};
+
 export type ExperienceEntry = {
   role: string;
   org: string;
@@ -73,6 +79,68 @@ export const experience: ExperienceEntry[] = [
   },
 ];
 
+// ========== EDUCATION ==========
+// School block + research entries, LinkedIn-style.
+// Dates/citations on research entries are best-guess from the LinkedIn
+// screenshot — verify and correct.
+
+export const educationBanner = {
+  src: "/images/uiuc-campus.jpg",
+  alt: "University of Illinois Urbana-Champaign main quad",
+};
+
+export type School = {
+  name: string;
+  degree: string;
+  detail: string;
+  when: string;
+  highlightsHtml: string[];
+};
+
+export const school: School = {
+  name: "University of Illinois Urbana-Champaign",
+  degree: "B.S. Engineering Mechanics",
+  detail: "Minor, Business · Grainger College of Engineering",
+  when: "2017 — 2021",
+  highlightsHtml: [
+    "Dean's List, College of Engineering",
+    "Research Assistant, Energy Transport Research Lab (ETRL) — Prof. Nenad Miljkovic's group",
+  ],
+};
+
+export type ResearchEntry = {
+  title: string;
+  when: string;
+  descriptionHtml: string;
+  citation: string;
+  href?: string;
+};
+
+// Two co-authored papers from the ETRL research period.
+export const research: ResearchEntry[] = [
+  {
+    title: "Breaking droplet jumping energy conversion limits with superhydrophobic microgrooves",
+    when: "SEP 2019 — MAY 2021",
+    descriptionHtml: `
+      Investigated how hierarchical microgrooved superhydrophobic surfaces influence
+      droplet coalescence and jumping dynamics. Showed that groove structures enhance
+      velocity and energy conversion efficiency nearly 2×.
+    `,
+    citation: "Langmuir 2020, 36, 32, 9510–9522",
+  },
+  {
+    title: "Droplet jumping: effects of droplet size, surface structure, pinning, and liquid properties",
+    when: "SEP 2019 — MAY 2021",
+    descriptionHtml: `
+      Developed a microdroplet visualization technique to study droplet jumping dynamics
+      on nanostructured superhydrophobic, hierarchical superhydrophobic, and biphilic
+      surfaces. Demonstrated how droplet size, pinning, and fluid properties govern
+      jump behavior.
+    `,
+    citation: "ACS Nano 2019, 13, 2, 1309–1323",
+  },
+];
+
 export type CapabilityGroup = { title: string; items: string[] };
 
 export const capabilities: CapabilityGroup[] = [
@@ -114,29 +182,36 @@ export const capabilities: CapabilityGroup[] = [
   },
 ];
 
-export type Project = {
+// ========== PRESS & CASE STUDIES ==========
+// External articles and notable programs. Entries with `href` render as links.
+
+export type PressItem = {
   title: string;
   descriptionHtml: string;
-  metaLine: string; // the small mono line beneath, e.g. "Role: X · stack · tags"
-  image?: { src: string; alt: string }; // optional banner image above the card content
+  metaLine: string;
+  href?: string;
+  image?: { src: string; alt: string };
 };
 
-export const projects: Project[] = [
+export const press: PressItem[] = [
   {
-    title: "UPS Happy Returns — first automated returns hub",
+    title: "How UPS + Happy Returns is making customer returns easy",
     descriptionHtml: `
-      Advised on and supported the deployment of 150 Geek+ AMRs for UPS Happy Returns'
-      first fully automated returns processing facility. Return processing time down 35%.
+      UPS feature on the first fully automated returns processing hub — 150 Geek+ AMRs
+      I advised on as Systems Consultant. Return processing time down 35%.
     `,
-    metaLine: "Role: Systems Consultant · Geek+ AMRs · WMS integration · UAT & SLA",
+    metaLine: "UPS Newsroom · Happy Returns · 150-robot AMR deployment",
+    href: "https://about.ups.com/us/en/our-stories/customer-first/how-we-re-making-customer-returns-easy--happy-returns-x-ups.html",
   },
   {
-    title: "UPS — 700+ robot AMR facility",
+    title: "5 ways the new UPS Velocity facility orchestrates",
     descriptionHtml: `
-      Directed planning, scheduling, and budgeting for one of Geek+'s largest deployments
-      in North America. Optimized storage capacity by 30%.
+      UPS feature on the Velocity facility — 700+ Geek+ AMRs, $40M+ program scope.
+      I directed planning, scheduling, and budgeting as Deployment Manager.
+      Storage capacity optimized by 30%.
     `,
-    metaLine: "Role: Deployment Manager · $40M+ program scope · Multi-vendor integration",
+    metaLine: "UPS Newsroom · Velocity · 700+ robot fleet · $40M+ program",
+    href: "https://about.ups.com/us/en/our-stories/innovation-driven/5-ways-the-new-ups-velocity-facility-orchestrates-.html",
   },
   {
     title: "Pickle Robot — deployment playbook v3",
@@ -145,7 +220,7 @@ export const projects: Project[] = [
       networking protocols, site prep, commissioning, and operator training. Per-site
       install time from 2 weeks to 2 days.
     `,
-    metaLine: "Role: Manager, Deployment Engineering · 9 sites · 15+ robotic systems",
+    metaLine: "Internal · 9 sites · 15+ robotic systems",
     image: {
       src: "/images/pickle-wide.jpg",
       alt: "Pickle Robot autonomous truck-unloading robot",
@@ -153,14 +228,8 @@ export const projects: Project[] = [
   },
 ];
 
-// Optional About section portrait. Rendered alongside the paragraphs.
-export const aboutPhoto = {
-  src: "/images/sirius-wife.jpg",
-  alt: "Sirius with his wife at Dream Lake, Rocky Mountain National Park",
-  caption: "Dream Lake, RMNP",
-};
-
 // Paragraphs on the About section. Inline HTML allowed.
+// UIUC credentials moved to the Education section.
 export const aboutParagraphsHtml: string[] = [
   `I work at the intersection of hardware, software, and operations — where robots stop
    being demos and start running somebody's P&L. My focus is the last mile of automation:
@@ -171,8 +240,7 @@ export const aboutParagraphsHtml: string[] = [
    ownership. <strong>Geek+</strong> was scale — multi-site rollouts, process maturity,
    enterprise customers. The combination I optimize for: innovate like a startup, execute
    like an enterprise.`,
-  `B.S. Engineering Mechanics, minor in Business — University of Illinois Urbana-Champaign.
-   Outside work: espresso (still chasing the god shot), RC aviation (EDF jets and
+  `Outside work: espresso (still chasing the god shot), RC aviation (EDF jets and
    collective-pitch helis), and American Mensa Area Coordinator for Champaign County.`,
 ];
 
