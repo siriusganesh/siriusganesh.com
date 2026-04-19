@@ -323,4 +323,6 @@ export const contactHtml = `
   is fine. Open to conversations about <strong>director-level deployment, field
   engineering, and robotics operations</strong> — especially at companies scaling
   from pilot to production.
+  <br /><br />
+  <a href="/Resume_SG.pdf" target="_blank" rel="noreferrer">Download resume (PDF) ↗</a>
 `;
