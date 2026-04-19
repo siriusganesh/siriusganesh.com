@@ -9,8 +9,8 @@
   --border: #e4e4df;         /* very light gray for rules */
   --border-strong: #91928f;  /* Gray 30 */
 
-  --navy: #002D74;           /* Pantone 288 C approximation */
-  --navy-deep: #001E52;      /* darker navy for hover */
+  --navy: #011f5b;           /* brand navy */
+  --navy-deep: #001541;      /* darker navy for hover */
   --navy-soft: #dbe3f5;      /* soft navy for subtle tints */
 
   --font-sans: Verdana, Geneva, "DejaVu Sans", sans-serif;
