@@ -64,6 +64,52 @@ import {
     ))}
   </section>
 
+  <section class="block" id="capabilities">
+    <header>
+      <h2>Capabilities</h2>
+      <span class="meta">what I do</span>
+    </header>
+
+    <div class="capability-grid">
+      {capabilities.map((group) => (
+        <div>
+          <h3>{group.title}</h3>
+          <ul>
+            {group.items.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="block" id="press">
+    <header>
+      <h2>Press &amp; case studies</h2>
+      <span class="meta">external coverage</span>
+    </header>
+
+    {press.map((p) => (
+      <article class="press-card">
+        {p.image && (
+          <div class="project-image">
+            <img src={p.image.src} alt={p.image.alt} loading="lazy" />
+          </div>
+        )}
+        <h3>
+          {p.href ? (
+            <a href={p.href} target="_blank" rel="noreferrer">
+              {p.title} <span class="ext-arrow" aria-hidden="true">↗</span>
+            </a>
+          ) : (
+            p.title
+          )}
+        </h3>
+        <p set:html={p.descriptionHtml}></p>
+        <div class="stack">{p.metaLine}</div>
+      </article>
+    ))}
+  </section>
+
   <section class="block" id="education">
     <header>
       <h2>Education &amp; research</h2>
@@ -118,52 +164,6 @@ import {
         ))}
       </details>
     )}
-  </section>
-
-  <section class="block" id="capabilities">
-    <header>
-      <h2>Capabilities</h2>
-      <span class="meta">what I do</span>
-    </header>
-
-    <div class="capability-grid">
-      {capabilities.map((group) => (
-        <div>
-          <h3>{group.title}</h3>
-          <ul>
-            {group.items.map((item) => <li>{item}</li>)}
-          </ul>
-        </div>
-      ))}
-    </div>
-  </section>
-
-  <section class="block" id="press">
-    <header>
-      <h2>Press &amp; case studies</h2>
-      <span class="meta">external coverage</span>
-    </header>
-
-    {press.map((p) => (
-      <article class="press-card">
-        {p.image && (
-          <div class="project-image">
-            <img src={p.image.src} alt={p.image.alt} loading="lazy" />
-          </div>
-        )}
-        <h3>
-          {p.href ? (
-            <a href={p.href} target="_blank" rel="noreferrer">
-              {p.title} <span class="ext-arrow" aria-hidden="true">↗</span>
-            </a>
-          ) : (
-            p.title
-          )}
-        </h3>
-        <p set:html={p.descriptionHtml}></p>
-        <div class="stack">{p.metaLine}</div>
-      </article>
-    ))}
   </section>
 
   <section class="block" id="about">
