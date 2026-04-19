@@ -127,7 +127,7 @@ export type ResearchEntry = {
   href?: string;
 };
 
-// Four co-authored papers from the ETRL research period. First two render by
+// Four co-authored papers from the ETRL research period. First one renders by
 // default; the rest live behind a "show more" expand on the page.
 export const research: ResearchEntry[] = [
   {

@@ -143,7 +143,7 @@ import {
     </div>
 
     <h3 class="subsection-label">Research</h3>
-    {research.slice(0, 2).map((r) => (
+    {research.slice(0, 1).map((r) => (
       <div class="research-item">
         <div class="research-head">
           <span class="research-title">{r.title}</span>
@@ -154,13 +154,13 @@ import {
       </div>
     ))}
 
-    {research.length > 2 && (
+    {research.length > 1 && (
       <details class="research-more">
         <summary>
-          <span class="more-label">Show {research.length - 2} more</span>
+          <span class="more-label">Show {research.length - 1} more</span>
           <span class="less-label">Show less</span>
         </summary>
-        {research.slice(2).map((r) => (
+        {research.slice(1).map((r) => (
           <div class="research-item">
             <div class="research-head">
               <span class="research-title">{r.title}</span>
