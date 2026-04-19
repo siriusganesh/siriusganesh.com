@@ -152,19 +152,33 @@ nav.topnav .wrap {
 
 nav.topnav .brand {
   color: var(--text-heading);
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.9rem;
   border: 0;
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
 }
 
-nav.topnav .brand::before {
-  content: "[ ";
-  color: var(--navy);
-}
+/* Blinking terminal caret after the brand name */
 nav.topnav .brand::after {
-  content: " ]";
-  color: var(--navy);
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  background: var(--navy);
+  margin-left: 3px;
+  vertical-align: -0.1em;
+  animation: brand-caret-blink 1.06s step-end infinite;
+}
+
+@keyframes brand-caret-blink {
+  0%, 50%   { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  nav.topnav .brand::after { animation: none; opacity: 1; }
 }
 
 nav.topnav ul {

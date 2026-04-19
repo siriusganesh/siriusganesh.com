@@ -1,12 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <rect width="64" height="64" fill="#ffffff"/>
-  <text x="50%" y="54%"
-        dominant-baseline="middle"
-        text-anchor="middle"
+  <text x="12" y="44"
         font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
         font-size="34"
         font-weight="500"
-        letter-spacing="-1">
-    <tspan fill="#011f5b">[</tspan><tspan fill="#303130">sg</tspan><tspan fill="#011f5b">]</tspan>
-  </text>
+        letter-spacing="-1"
+        fill="#303130">sg</text>
+  <rect x="46" y="18" width="3" height="28" fill="#011f5b"/>
 </svg>
