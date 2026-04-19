@@ -1,0 +1,26 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="404 — Sirius Ganesh" description="Page not found.">
+  <section class="block notfound">
+    <header>
+      <h2>404 — page not found</h2>
+      <span class="meta">dead link</span>
+    </header>
+    <p>
+      That route doesn't exist. You probably want the
+      <a href="/">home page</a>, or jump straight to
+      <a href="/#experience">experience</a>,
+      <a href="/#capabilities">capabilities</a>,
+      <a href="/#press">press</a>, or
+      <a href="/#contact">contact</a>.
+    </p>
+  </section>
+</Base>
+
+<style>
+  .notfound p {
+    margin-top: 1.5rem;
+    max-width: 52ch;
+  }
+</style>
