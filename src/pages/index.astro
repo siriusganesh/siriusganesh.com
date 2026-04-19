@@ -32,7 +32,15 @@ import {
         </div>
       </div>
       <figure class="hero-portrait">
-        <img src={heroPortrait.src} alt={heroPortrait.alt} loading="eager" fetchpriority="high" decoding="sync" />
+        <img
+          src={heroPortrait.src}
+          srcset="/images/sirius-wife-hero-400w.webp 400w, /images/sirius-wife-hero.webp 783w"
+          sizes="(max-width: 560px) 180px, (max-width: 720px) 220px, 300px"
+          alt={heroPortrait.alt}
+          loading="eager"
+          fetchpriority="high"
+          decoding="sync"
+        />
       </figure>
     </div>
   </section>
