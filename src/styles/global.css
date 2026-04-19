@@ -25,7 +25,7 @@
   --text: #111113;           /* off-black, not pure black */
   --text-heading: #303130;   /* Gray 50 */
   --text-dim: #616160;       /* Gray 40 */
-  --text-faint: #91928f;     /* Gray 30 */
+  --text-faint: #717270;     /* WCAG AA on white — 4.84:1 */
   --border: #e4e4df;         /* very light gray for rules */
   --border-strong: #91928f;  /* Gray 30 */
 
