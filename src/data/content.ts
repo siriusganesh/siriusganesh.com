@@ -29,7 +29,7 @@ export const ledeHtml = `
 // Hero portrait. Photo beside the intro. Pre-cropped to keep Dream Lake
 // backdrop while focusing on the couple.
 export const heroPortrait = {
-  src: "/images/sirius-wife-hero.jpg",
+  src: "/images/sirius-wife-hero.webp",
   alt: "Sirius with his wife at Dream Lake, Rocky Mountain National Park",
 };
 
@@ -49,7 +49,7 @@ export const experience: ExperienceEntry[] = [
     location: "Denver, CO",
     when: "JAN 2025 — PRESENT",
     image: {
-      src: "/images/pickle-banner.jpg",
+      src: "/images/pickle-banner.webp",
       alt: "Pickle Robot — Physical AI for Supply Chain Automation (gripper)",
     },
     bulletsHtml: [
@@ -66,7 +66,7 @@ export const experience: ExperienceEntry[] = [
     location: "San Diego, CA",
     when: "AUG 2023 — JAN 2025",
     image: {
-      src: "/images/geekplus-banner.jpg",
+      src: "/images/geekplus-banner.webp",
       alt: "Geek+ — One-Stop Partner For Warehouse Robotics",
     },
     bulletsHtml: [
@@ -95,7 +95,7 @@ export const experience: ExperienceEntry[] = [
 // screenshot — verify and correct.
 
 export const educationBanner = {
-  src: "/images/uiuc-campus.jpg",
+  src: "/images/uiuc-campus.webp",
   alt: "University of Illinois Urbana-Champaign main quad",
 };
 
@@ -288,21 +288,21 @@ export type AboutTile =
 export const aboutGallery: AboutTile[] = [
   {
     kind: "photo",
-    src: "/images/espresso.jpg",
+    src: "/images/espresso.webp",
     alt: "Espresso pull on a Lelit machine",
     label: "Espresso",
     caption: "Lelit · chasing the god shot",
   },
   {
     kind: "photo",
-    src: "/images/maple-nyc.jpg",
+    src: "/images/maple-nyc.webp",
     alt: "Maple the golden retriever in Times Square, NYC",
     label: "Maple",
     caption: "Golden retriever · chief morale officer",
   },
   {
     kind: "photo",
-    src: "/images/aspen-lake.jpg",
+    src: "/images/aspen-lake.webp",
     alt: "Aspen trees in fall color along a Rocky Mountain lake",
     label: "Rockies",
     caption: "Aspens and alpine lakes, Colorado",

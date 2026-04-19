@@ -32,7 +32,7 @@ import {
         </div>
       </div>
       <figure class="hero-portrait">
-        <img src={heroPortrait.src} alt={heroPortrait.alt} loading="eager" />
+        <img src={heroPortrait.src} alt={heroPortrait.alt} loading="eager" fetchpriority="high" decoding="sync" />
       </figure>
     </div>
   </section>
@@ -49,7 +49,7 @@ import {
       <div class="experience-item">
         {job.image && (
           <div class="experience-image">
-            <img src={job.image.src} alt={job.image.alt} loading="lazy" />
+            <img src={job.image.src} alt={job.image.alt} loading="lazy" decoding="async" />
           </div>
         )}
         <div>
@@ -92,7 +92,7 @@ import {
       <article class="press-card">
         {p.image && (
           <div class="project-image">
-            <img src={p.image.src} alt={p.image.alt} loading="lazy" />
+            <img src={p.image.src} alt={p.image.alt} loading="lazy" decoding="async" />
           </div>
         )}
         <h3>
@@ -117,7 +117,7 @@ import {
     </header>
 
     <figure class="edu-banner">
-      <img src={educationBanner.src} alt={educationBanner.alt} loading="lazy" />
+      <img src={educationBanner.src} alt={educationBanner.alt} loading="lazy" decoding="async" />
     </figure>
 
     <div class="school-block">
@@ -178,7 +178,7 @@ import {
       {aboutGallery.map((tile) => (
         tile.kind === "photo" ? (
           <figure class="about-tile photo">
-            <img src={tile.src} alt={tile.alt} loading="lazy" />
+            <img src={tile.src} alt={tile.alt} loading="lazy" decoding="async" />
             <figcaption>
               <span class="tile-label">{tile.label}</span>
               <span class="tile-caption">{tile.caption}</span>
