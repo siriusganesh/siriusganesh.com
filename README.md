@@ -1,6 +1,16 @@
 # siriusganesh.com
 
-Personal site. Astro, static build, hosted on Cloudflare Pages.
+Personal portfolio for **Sirius Ganesh** — deployment engineering leader scaling
+warehouse robotics from startup pilot to enterprise production. Pickle Robot · Geek+ ·
+AMR fleets · systems integration.
+
+**Live:** [siriusganesh.com](https://siriusganesh.com)
+
+Built with Astro as a static site — no runtime JS, self-hosted fonts, deployed on
+Cloudflare Pages. Source is public so the build is reproducible and to make small
+updates (resume, new project, typo) frictionless.
+
+---
 
 ## Stack
 
