@@ -22,7 +22,10 @@ const today = new Date().toISOString().slice(0, 10);
 // Axes:
 //   x = days off roast at time of brew
 //   y = flow rate (g/s) = yieldG / timeS
-// One series per bean. Grind setting rendered as point label so a regrind is visible.
+//
+// Primary series: per-day MEAN flow rate per bean. Line connects these.
+// Ghost series: individual shots (hollow dots) shown behind the mean points
+//               so daily variation is visible without cluttering the line.
 
 type Point = {
   x: number;        // days off roast
@@ -31,8 +34,15 @@ type Point = {
   entry: typeof chrono[number];
 };
 
-// Group points by bean
-const byBean = new Map<string, Point[]>();
+type DayPoint = {
+  x: number;        // days off roast (shared across shots on that day)
+  y: number;        // mean flow rate for that day
+  count: number;    // number of shots averaged
+  date: string;
+};
+
+// Group individual shots by bean (used as ghost dots)
+const rawByBean = new Map<string, Point[]>();
 for (const e of chrono) {
   const p: Point = {
     x: daysBetween(e.date, e.roastDate),
@@ -40,12 +50,29 @@ for (const e of chrono) {
     grind: e.grind ?? '',
     entry: e,
   };
-  const list = byBean.get(e.bean) ?? [];
+  const list = rawByBean.get(e.bean) ?? [];
   list.push(p);
-  byBean.set(e.bean, list);
+  rawByBean.set(e.bean, list);
 }
-// Sort each bean's points by days-off-roast so the line path is monotonic in x.
-for (const list of byBean.values()) list.sort((a, b) => a.x - b.x);
+
+// Collapse to one point per (bean, date) using mean flow rate (used as line + solid dots)
+const avgByBean = new Map<string, DayPoint[]>();
+for (const [bean, shots] of rawByBean.entries()) {
+  const byDate = new Map<string, Point[]>();
+  for (const p of shots) {
+    const key = p.entry.date;
+    const list = byDate.get(key) ?? [];
+    list.push(p);
+    byDate.set(key, list);
+  }
+  const days: DayPoint[] = [];
+  for (const [date, dayShots] of byDate.entries()) {
+    const meanY = dayShots.reduce((s, p) => s + p.y, 0) / dayShots.length;
+    days.push({ x: dayShots[0].x, y: meanY, count: dayShots.length, date });
+  }
+  days.sort((a, b) => a.x - b.x);
+  avgByBean.set(bean, days);
+}
 
 // Chart geometry
 const W = 640;
@@ -55,9 +82,10 @@ const innerW = W - M.left - M.right;
 const innerH = H - M.top - M.bottom;
 
 // Axis domains. Pad so points don't sit on the edges.
+// Domain uses raw shots so ghost dots at the extremes still fit on the canvas.
 // x: 0 -> max days off roast observed, rounded up to next 5, min 30
-const allX = [...byBean.values()].flat().map((p) => p.x);
-const allY = [...byBean.values()].flat().map((p) => p.y);
+const allX = [...rawByBean.values()].flat().map((p) => p.x);
+const allY = [...rawByBean.values()].flat().map((p) => p.y);
 const xMaxData = allX.length ? Math.max(...allX) : 30;
 const xMax = Math.max(30, Math.ceil(xMaxData / 5) * 5);
 const xMin = 0;
@@ -92,7 +120,7 @@ for (let t = Math.ceil(yMin / 0.25) * 0.25; t <= yMax + 1e-9; t += 0.25) {
 // Color palette cycled per bean
 const palette = ['#011f5b', '#a33', '#2a6', '#c70', '#73c'];
 const beanColor = new Map<string, string>();
-[...byBean.keys()].forEach((b, i) => beanColor.set(b, palette[i % palette.length]));
+[...rawByBean.keys()].forEach((b, i) => beanColor.set(b, palette[i % palette.length]));
 ---
 <Base
   title="coffee lab · sirius ganesh"
@@ -123,11 +151,14 @@ const beanColor = new Map<string, string>();
         <div class="bean-card">
           <div class="bean-name">{b.bean}</div>
           {b.roaster && <div class="bean-roaster">{b.roaster}</div>}
-          <div class="bean-meta">
-            <span>roasted {b.roastDate}</span>
-            <span class="sep">·</span>
-            <span>{daysBetween(today, b.roastDate)}d off roast</span>
-          </div>
+          {b.badges && b.badges.length > 0 && (
+            <div class="bean-badges">{b.badges.join(' · ')}</div>
+          )}
+          {b.origin && <div class="bean-origin">{b.origin}</div>}
+          {b.tastingNotes && b.tastingNotes.length > 0 && (
+            <div class="bean-notes">{b.tastingNotes.join(' · ')}</div>
+          )}
+          <div class="bean-age">{daysBetween(today, b.roastDate)}d off roast</div>
         </div>
       ))}
     </div>
@@ -226,28 +257,46 @@ const beanColor = new Map<string, string>();
         <line x1={M.left} y1={M.top + innerH} x2={M.left + innerW} y2={M.top + innerH} stroke="#91928f" stroke-width="1" />
         <line x1={M.left} y1={M.top} x2={M.left} y2={M.top + innerH} stroke="#91928f" stroke-width="1" />
 
-        {/* series per bean */}
-        {[...byBean.entries()].map(([bean, points]) => {
+        {/* Ghost dots: individual shots, rendered behind so they show variation */}
+        {[...rawByBean.entries()].map(([bean, points]) => {
           const color = beanColor.get(bean) ?? '#011f5b';
-          // build polyline string if there are 2+ points
-          const path = points.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
           return (
             <g>
-              {points.length > 1 && (
+              {points.map((p) => (
+                <circle
+                  cx={sx(p.x)} cy={sy(p.y)} r="3"
+                  fill="none"
+                  stroke={color}
+                  stroke-width="1"
+                  stroke-opacity="0.55"
+                  stroke-dasharray="2 1.5"
+                >
+                  <title>{`${p.entry.date} · ${bean} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind} (raw shot)`}</title>
+                </circle>
+              ))}
+            </g>
+          );
+        })}
+
+        {/* Primary series: per-day mean flow rate — line + solid dots */}
+        {[...avgByBean.entries()].map(([bean, days]) => {
+          const color = beanColor.get(bean) ?? '#011f5b';
+          const path = days.map((d) => `${sx(d.x).toFixed(1)},${sy(d.y).toFixed(1)}`).join(' ');
+          return (
+            <g>
+              {days.length > 1 && (
                 <polyline
                   points={path}
                   fill="none"
                   stroke={color}
                   stroke-width="1.5"
-                  stroke-opacity="0.6"
+                  stroke-opacity="0.75"
                 />
               )}
-              {points.map((p) => (
-                <g>
-                  <circle cx={sx(p.x)} cy={sy(p.y)} r="4" fill={color}>
-                    <title>{`${p.entry.date} · ${bean} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind}`}</title>
-                  </circle>
-                </g>
+              {days.map((d) => (
+                <circle cx={sx(d.x)} cy={sy(d.y)} r="4" fill={color}>
+                  <title>{`${d.date} · ${bean} · ${d.x}d off · ${d.y.toFixed(2)} g/s (mean of ${d.count} shot${d.count === 1 ? '' : 's'})`}</title>
+                </circle>
               ))}
             </g>
           );
@@ -255,19 +304,25 @@ const beanColor = new Map<string, string>();
       </svg>
 
       <figcaption class="chart-legend">
-        {[...byBean.keys()].map((bean) => (
+        {[...rawByBean.keys()].map((bean) => (
           <span class="legend-item">
             <span class="legend-dot" style={`background:${beanColor.get(bean)}`}></span>
             {bean}
           </span>
         ))}
+        <span class="legend-item legend-note">
+          <span class="legend-dot legend-dot-solid"></span>daily mean
+          <span class="legend-dot legend-dot-ghost"></span>individual shot
+        </span>
       </figcaption>
     </figure>
 
     <p class="chart-note">
       Higher flow = less puck resistance. Rising trend at the same grind
-      suggests beans losing CO<sub>2</sub>. Shaded band is the rough espresso
-      peak window (7 – 21 days off roast).
+      suggests beans losing CO<sub>2</sub>. Solid dots are per-day averages
+      (connected by line); hollow dashed rings are individual shots, shown to
+      expose within-day variation. Shaded band is the rough espresso peak
+      window (7 – 21 days off roast).
     </p>
   </section>
 

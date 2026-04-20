@@ -22,10 +22,22 @@ export type BrewEntry = {
 };
 
 export type ActiveBean = {
-  bean: string;
-  roaster?: string;
-  roastDate: string;
+  bean: string;                 // distinctive display name ("Mokha Java", "Yirgacheffe")
+  roaster?: string;             // shown small/dim under the name
+  roastDate: string;            // ISO
   openedDate?: string;
+
+  // Identification attributes. All optional — only set the ones that apply.
+  // badges: free-text chips shown in small-caps row, e.g.
+  //   ["special release", "blend", "medium"]
+  //   ["single origin", "natural", "medium"]
+  badges?: string[];
+  // origin: one-line human-readable origin description.
+  //   single origin → "Country · Region" (e.g. "Ethiopia · Yirgacheffe")
+  //   blend → mix description (e.g. "African + Pacific Rim")
+  origin?: string;
+  // tastingNotes: ordered, short. Rendered dot-separated.
+  tastingNotes?: string[];
 };
 
 // Machine / setup displayed in the header. Change when the hardware changes.
@@ -37,9 +49,12 @@ export const rig = {
 // Bags currently open. Shown in the "Currently brewing" header.
 export const activeBeans: ActiveBean[] = [
   {
-    bean: 'La Cosecha Mokha Java',
+    bean: 'Mokha Java',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
+    badges: ['special release', 'blend', 'medium'],
+    origin: 'African + Pacific Rim',
+    tastingNotes: ['fig', 'dried raspberry', 'dark chocolate'],
   },
 ];
 
@@ -47,7 +62,7 @@ export const activeBeans: ActiveBean[] = [
 export const brews: BrewEntry[] = [
   {
     date: '2026-04-19',
-    bean: 'La Cosecha Mokha Java',
+    bean: 'Mokha Java',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -62,7 +77,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-04-19',
-    bean: 'La Cosecha Mokha Java',
+    bean: 'Mokha Java',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -77,7 +92,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-04-20',
-    bean: 'La Cosecha Mokha Java',
+    bean: 'Mokha Java',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -91,7 +106,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-04-20',
-    bean: 'La Cosecha Mokha Java',
+    bean: 'Mokha Java',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
