@@ -1,0 +1,315 @@
+---
+import Base from '../layouts/Base.astro';
+import {
+  brews,
+  activeBeans,
+  rig,
+  daysBetween,
+  flowRate,
+  ratio,
+} from '../data/coffee';
+
+// Sort log newest-first for display. Keep original chronological order for chart math.
+const chrono = [...brews];
+const newestFirst = [...brews].sort((a, b) =>
+  (b.date + b.bean).localeCompare(a.date + a.bean)
+);
+
+// Today string (used for "days since open" on currently-brewing bags)
+const today = new Date().toISOString().slice(0, 10);
+
+// ---------- CHART ----------
+// Axes:
+//   x = days off roast at time of brew
+//   y = flow rate (g/s) = yieldG / timeS
+// One series per bean. Grind setting rendered as point label so a regrind is visible.
+
+type Point = {
+  x: number;        // days off roast
+  y: number;        // flow rate g/s
+  grind: string;
+  entry: typeof chrono[number];
+};
+
+// Group points by bean
+const byBean = new Map<string, Point[]>();
+for (const e of chrono) {
+  const p: Point = {
+    x: daysBetween(e.date, e.roastDate),
+    y: flowRate(e),
+    grind: e.grind ?? '',
+    entry: e,
+  };
+  const list = byBean.get(e.bean) ?? [];
+  list.push(p);
+  byBean.set(e.bean, list);
+}
+// Sort each bean's points by days-off-roast so the line path is monotonic in x.
+for (const list of byBean.values()) list.sort((a, b) => a.x - b.x);
+
+// Chart geometry
+const W = 640;
+const H = 280;
+const M = { top: 20, right: 20, bottom: 36, left: 44 };
+const innerW = W - M.left - M.right;
+const innerH = H - M.top - M.bottom;
+
+// Axis domains. Pad so points don't sit on the edges.
+// x: 0 -> max days off roast observed, rounded up to next 5, min 30
+const allX = [...byBean.values()].flat().map((p) => p.x);
+const allY = [...byBean.values()].flat().map((p) => p.y);
+const xMaxData = allX.length ? Math.max(...allX) : 30;
+const xMax = Math.max(30, Math.ceil(xMaxData / 5) * 5);
+const xMin = 0;
+// y: flow rates land ~1.0 - 2.5 g/s typically. Widen a bit either side of data.
+const yMinData = allY.length ? Math.min(...allY) : 1.0;
+const yMaxData = allY.length ? Math.max(...allY) : 2.0;
+const yMin = Math.max(0, Math.floor((yMinData - 0.3) * 10) / 10);
+const yMax = Math.ceil((yMaxData + 0.3) * 10) / 10;
+
+function sx(x: number): number {
+  return M.left + ((x - xMin) / (xMax - xMin)) * innerW;
+}
+function sy(y: number): number {
+  // invert: high y value -> low pixel
+  return M.top + innerH - ((y - yMin) / (yMax - yMin)) * innerH;
+}
+
+// Peak-window shading (espresso rule of thumb: 7 - 21 days off roast).
+const peakX1 = sx(7);
+const peakX2 = sx(21);
+
+// X-axis ticks every 5 days
+const xTicks: number[] = [];
+for (let t = 0; t <= xMax; t += 5) xTicks.push(t);
+
+// Y-axis ticks every 0.25 g/s
+const yTicks: number[] = [];
+for (let t = Math.ceil(yMin / 0.25) * 0.25; t <= yMax + 1e-9; t += 0.25) {
+  yTicks.push(Number(t.toFixed(2)));
+}
+
+// Color palette cycled per bean
+const palette = ['#011f5b', '#a33', '#2a6', '#c70', '#73c'];
+const beanColor = new Map<string, string>();
+[...byBean.keys()].forEach((b, i) => beanColor.set(b, palette[i % palette.length]));
+---
+<Base
+  title="coffee lab · sirius ganesh"
+  description="Espresso brew log and bean-degradation chart for Sirius Ganesh's home setup (Lelit Mara X + DF64)."
+>
+  <section class="hero coffee-hero">
+    <div class="hero-text">
+      <span class="overline">coffee lab</span>
+      <h1>brew log<span class="accent">.</span></h1>
+      <p class="lede">
+        Personal espresso journal. Tracking beans against days off roast to see
+        when they fall off peak. Pulled on <strong>{rig.machine}</strong>
+        ground with <strong>{rig.grinder}</strong>. Time measured from first
+        drop to end of pour.
+      </p>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section class="block" id="currently-brewing">
+    <header>
+      <h2>Currently brewing</h2>
+      <span class="meta">{activeBeans.length} open</span>
+    </header>
+    <div class="bean-grid">
+      {activeBeans.map((b) => (
+        <div class="bean-card">
+          <div class="bean-name">{b.bean}</div>
+          {b.roaster && <div class="bean-roaster">{b.roaster}</div>}
+          <div class="bean-meta">
+            <span>roasted {b.roastDate}</span>
+            <span class="sep">·</span>
+            <span>{daysBetween(today, b.roastDate)}d off roast</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="block" id="degradation">
+    <header>
+      <h2>Degradation</h2>
+      <span class="meta">flow rate vs days off roast</span>
+    </header>
+
+    <figure class="chart">
+      <svg viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow rate vs days off roast">
+        {/* peak-window shaded band */}
+        <rect
+          x={peakX1}
+          y={M.top}
+          width={peakX2 - peakX1}
+          height={innerH}
+          fill="#dbe3f5"
+          opacity="0.45"
+        />
+        <text
+          x={(peakX1 + peakX2) / 2}
+          y={M.top + 12}
+          text-anchor="middle"
+          font-size="10"
+          fill="#616160"
+          font-family="IBM Plex Mono, monospace"
+        >
+          peak window
+        </text>
+
+        {/* gridlines + x-axis ticks */}
+        {xTicks.map((t) => (
+          <g>
+            <line
+              x1={sx(t)} y1={M.top}
+              x2={sx(t)} y2={M.top + innerH}
+              stroke="#e4e4df"
+              stroke-width="1"
+            />
+            <text
+              x={sx(t)}
+              y={M.top + innerH + 16}
+              text-anchor="middle"
+              font-size="10"
+              fill="#616160"
+              font-family="IBM Plex Mono, monospace"
+            >{t}</text>
+          </g>
+        ))}
+
+        {/* y-axis ticks */}
+        {yTicks.map((t) => (
+          <g>
+            <line
+              x1={M.left} y1={sy(t)}
+              x2={M.left + innerW} y2={sy(t)}
+              stroke="#e4e4df"
+              stroke-width="1"
+            />
+            <text
+              x={M.left - 6}
+              y={sy(t) + 3}
+              text-anchor="end"
+              font-size="10"
+              fill="#616160"
+              font-family="IBM Plex Mono, monospace"
+            >{t.toFixed(2)}</text>
+          </g>
+        ))}
+
+        {/* axis labels */}
+        <text
+          x={M.left + innerW / 2}
+          y={H - 4}
+          text-anchor="middle"
+          font-size="10"
+          fill="#303130"
+          font-family="IBM Plex Mono, monospace"
+          letter-spacing="0.05em"
+        >DAYS OFF ROAST</text>
+        <text
+          x={-H / 2}
+          y={12}
+          transform="rotate(-90)"
+          text-anchor="middle"
+          font-size="10"
+          fill="#303130"
+          font-family="IBM Plex Mono, monospace"
+          letter-spacing="0.05em"
+        >FLOW RATE (g/s)</text>
+
+        {/* axes */}
+        <line x1={M.left} y1={M.top + innerH} x2={M.left + innerW} y2={M.top + innerH} stroke="#91928f" stroke-width="1" />
+        <line x1={M.left} y1={M.top} x2={M.left} y2={M.top + innerH} stroke="#91928f" stroke-width="1" />
+
+        {/* series per bean */}
+        {[...byBean.entries()].map(([bean, points]) => {
+          const color = beanColor.get(bean) ?? '#011f5b';
+          // build polyline string if there are 2+ points
+          const path = points.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
+          return (
+            <g>
+              {points.length > 1 && (
+                <polyline
+                  points={path}
+                  fill="none"
+                  stroke={color}
+                  stroke-width="1.5"
+                  stroke-opacity="0.6"
+                />
+              )}
+              {points.map((p) => (
+                <g>
+                  <circle cx={sx(p.x)} cy={sy(p.y)} r="4" fill={color}>
+                    <title>{`${p.entry.date} · ${bean} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind}`}</title>
+                  </circle>
+                </g>
+              ))}
+            </g>
+          );
+        })}
+      </svg>
+
+      <figcaption class="chart-legend">
+        {[...byBean.keys()].map((bean) => (
+          <span class="legend-item">
+            <span class="legend-dot" style={`background:${beanColor.get(bean)}`}></span>
+            {bean}
+          </span>
+        ))}
+      </figcaption>
+    </figure>
+
+    <p class="chart-note">
+      Higher flow = less puck resistance. Rising trend at the same grind
+      suggests beans losing CO<sub>2</sub>. Shaded band is the rough espresso
+      peak window (7 – 21 days off roast).
+    </p>
+  </section>
+
+  <section class="block" id="log">
+    <header>
+      <h2>Log</h2>
+      <span class="meta">{brews.length} shots</span>
+    </header>
+
+    <div class="log-table-wrap">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th scope="col">date</th>
+            <th scope="col">off&nbsp;roast</th>
+            <th scope="col">bean</th>
+            <th scope="col">dose</th>
+            <th scope="col">yield</th>
+            <th scope="col">ratio</th>
+            <th scope="col">time</th>
+            <th scope="col">flow</th>
+            <th scope="col">grind</th>
+            <th scope="col">notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {newestFirst.map((e) => (
+            <tr>
+              <td>{e.date}</td>
+              <td>{daysBetween(e.date, e.roastDate)}d</td>
+              <td>{e.bean}</td>
+              <td>{e.doseG.toFixed(1)}g</td>
+              <td>{e.yieldG.toFixed(1)}g</td>
+              <td>{ratio(e)}</td>
+              <td>{e.timeS}s</td>
+              <td>{flowRate(e).toFixed(2)}</td>
+              <td>{e.grind ?? '—'}</td>
+              <td class="notes-cell">{e.notes ?? ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</Base>
