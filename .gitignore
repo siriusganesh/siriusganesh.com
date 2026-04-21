@@ -24,3 +24,6 @@ pnpm-debug.log*
 
 # OS
 Thumbs.db
+
+# Local-only favicon export (not referenced by the site)
+public/favicon-512.png
