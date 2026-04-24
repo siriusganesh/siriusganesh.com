@@ -273,7 +273,7 @@ export const press: PressItem[] = [
 // About section paragraphs — genuinely off-the-clock. Career/P&L talk
 // belongs in Experience, not here.
 export const aboutParagraphsHtml: string[] = [
-  `Off the clock: espresso (still chasing the god shot on a Lelit), RC aviation
+  `Off the clock: <a href="/coffee">espresso</a> (still chasing the god shot on a Lelit), RC aviation
    (EDF jets and collective-pitch helis), and as much Colorado Rockies trail time as
    the calendar allows. <strong>Maple</strong> — our golden retriever and unofficial
    chief morale officer — shows up on most of the good ones.`,
