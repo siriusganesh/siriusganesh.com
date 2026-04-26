@@ -888,7 +888,54 @@ footer.page-footer {
 .log-table td.notes-cell {
   white-space: normal;
   color: var(--text-dim);
-  min-width: 10rem;
+  min-width: 0;
+  width: 2.4rem;
+  text-align: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.notes-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: transform 150ms ease, color 150ms ease,
+              border-color 150ms ease, background 150ms ease;
+}
+
+.notes-toggle:hover,
+.notes-toggle:focus-visible {
+  color: var(--navy);
+  border-color: var(--navy);
+  background: var(--navy-soft);
+  outline: none;
+}
+
+.notes-toggle[aria-expanded="true"] {
+  transform: rotate(90deg);
+  color: var(--navy);
+  border-color: var(--navy);
+  background: var(--navy-soft);
+}
+
+.log-table tr.notes-detail > td.notes-detail-cell {
+  background: var(--bg-tint);
+  padding: 0.85rem 1rem;
+  font-style: italic;
+  color: var(--text-dim);
+  white-space: normal;
+  border-top: 1px dashed var(--border);
 }
 
 @media (max-width: 560px) {

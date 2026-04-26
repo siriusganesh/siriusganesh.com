@@ -349,22 +349,74 @@ const beanColor = new Map<string, string>();
           </tr>
         </thead>
         <tbody>
-          {newestFirst.map((e) => (
-            <tr>
-              <td>{e.date}</td>
-              <td>{daysBetween(e.date, e.roastDate)}d</td>
-              <td>{e.bean}</td>
-              <td>{e.doseG.toFixed(1)}g</td>
-              <td>{e.yieldG.toFixed(1)}g</td>
-              <td>{ratio(e)}</td>
-              <td>{e.timeS}s</td>
-              <td>{flowRate(e).toFixed(2)}</td>
-              <td>{e.grind ?? '—'}</td>
-              <td class="notes-cell">{e.notes ?? ''}</td>
-            </tr>
+          {newestFirst.map((e, i) => (
+            <>
+              <tr class="log-row">
+                <td>{e.date}</td>
+                <td>{daysBetween(e.date, e.roastDate)}d</td>
+                <td>{e.bean}</td>
+                <td>{e.doseG.toFixed(1)}g</td>
+                <td>{e.yieldG.toFixed(1)}g</td>
+                <td>{ratio(e)}</td>
+                <td>{e.timeS}s</td>
+                <td>{flowRate(e).toFixed(2)}</td>
+                <td>{e.grind ?? '—'}</td>
+                <td class="notes-cell">
+                  {e.notes && (
+                    <button
+                      type="button"
+                      class="notes-toggle"
+                      aria-expanded="false"
+                      aria-controls={`brew-note-${i}`}
+                      aria-label="Show notes"
+                    >›</button>
+                  )}
+                </td>
+              </tr>
+              {e.notes && (
+                <tr class="notes-detail" id={`brew-note-${i}`} hidden>
+                  <td colspan="10" class="notes-detail-cell">{e.notes}</td>
+                </tr>
+              )}
+            </>
           ))}
         </tbody>
       </table>
     </div>
   </section>
+
+  <script>
+    // Notes column disclosure pattern. Each row with notes has a chevron button
+    // that toggles a sibling .notes-detail row. Only one detail row may be open
+    // at a time across the table.
+    document.addEventListener('click', (event) => {
+      const target = event.target as Element | null;
+      const btn = target?.closest?.('.notes-toggle') as HTMLButtonElement | null;
+      if (!btn) return;
+      const row = btn.closest('tr');
+      const detail = row?.nextElementSibling as HTMLElement | null;
+      if (!detail || !detail.classList.contains('notes-detail')) return;
+
+      const opening = detail.hasAttribute('hidden');
+
+      // Collapse any other open detail rows in the same table.
+      const table = row?.closest('table');
+      table?.querySelectorAll('.notes-detail').forEach((other) => {
+        const el = other as HTMLElement;
+        if (el !== detail && !el.hasAttribute('hidden')) {
+          el.setAttribute('hidden', '');
+          const otherBtn = el.previousElementSibling?.querySelector('.notes-toggle');
+          otherBtn?.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      if (opening) {
+        detail.removeAttribute('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      } else {
+        detail.setAttribute('hidden', '');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  </script>
 </Base>
