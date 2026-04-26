@@ -413,6 +413,13 @@ const beanColor = new Map<string, string>();
       if (opening) {
         detail.removeAttribute('hidden');
         btn.setAttribute('aria-expanded', 'true');
+        // Mobile: when opening a row while the table is horizontally scrolled,
+        // bring the wrap back to scrollLeft=0 so the detail row starts on screen
+        // rather than mid-sentence.
+        const wrap = table?.parentElement as HTMLElement | null;
+        if (wrap?.classList.contains('log-table-wrap') && wrap.scrollLeft > 0) {
+          wrap.scrollTo({ left: 0, behavior: 'smooth' });
+        }
       } else {
         detail.setAttribute('hidden', '');
         btn.setAttribute('aria-expanded', 'false');
