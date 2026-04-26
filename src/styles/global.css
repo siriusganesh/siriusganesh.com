@@ -914,6 +914,10 @@ footer.page-footer {
               border-color 150ms ease, background 150ms ease;
 }
 
+.notes-toggle > svg {
+  display: block;
+}
+
 .notes-toggle:hover,
 .notes-toggle:focus-visible {
   color: var(--navy);
