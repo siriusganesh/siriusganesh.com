@@ -42,6 +42,14 @@
 
 * { box-sizing: border-box; }
 
+/* Offset in-page anchor jumps so section headers clear the sticky topnav
+   instead of landing behind it. Nav is ~53px on desktop and ~43px at the
+   560px breakpoint; values below leave a small visual gap above the header.
+   Applies to both #hash navigation and on-load hash landings. */
+html {
+  scroll-padding-top: 4rem;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -689,6 +697,9 @@ footer.page-footer {
 }
 
 @media (max-width: 560px) {
+  /* Slimmer topnav at this breakpoint — tighten the anchor offset to match. */
+  html { scroll-padding-top: 3.75rem; }
+
   .experience-item { grid-template-columns: 1fr; }
   .experience-item .when { grid-column: 1 / -1; }
   .school-head { grid-template-columns: 1fr; }
