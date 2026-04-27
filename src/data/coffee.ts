@@ -21,11 +21,13 @@ export type BrewEntry = {
   notes?: string;
 };
 
-export type ActiveBean = {
+export type Bag = {
   bean: string;                 // distinctive display name ("Mokha Java", "Yirgacheffe")
+                                // also acts as the bag's identity / key for filtering.
   roaster?: string;             // shown small/dim under the name
   roastDate: string;            // ISO
   openedDate?: string;
+  closedDate?: string;          // when the bag was finished. Empty/undefined = still open.
 
   // Identification attributes. All optional — only set the ones that apply.
   // badges: free-text chips shown in small-caps row, e.g.
@@ -40,23 +42,43 @@ export type ActiveBean = {
   tastingNotes?: string[];
 };
 
+// Backward-compatible alias for the old type name.
+export type ActiveBean = Bag;
+
 // Machine / setup displayed in the header. Change when the hardware changes.
 export const rig = {
   machine: 'Lelit Mara X',
   grinder: 'DF64',
 };
 
-// Bags currently open. Shown in the "Currently brewing" header.
-export const activeBeans: ActiveBean[] = [
+// All bags — open (no closedDate) and past (with closedDate).
+// "Currently brewing" card filters to open. The bag picker shows both groups.
+export const bags: Bag[] = [
+  {
+    bean: 'Guatemala El Progreso',
+    roaster: 'La Cosecha',
+    roastDate: '2026-04-14',
+    openedDate: '2026-04-28',
+    badges: ['single origin', 'light-medium'],
+    origin: 'Guatemala · El Progreso',
+    tastingNotes: ['vanilla', 'peach', 'tangerine'],
+  },
   {
     bean: 'Mokha Java',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
+    openedDate: '2026-04-19',
+    closedDate: '2026-04-28',
     badges: ['special release', 'blend', 'medium'],
     origin: 'African + Pacific Rim',
     tastingNotes: ['fig', 'dried raspberry', 'dark chocolate'],
   },
 ];
+
+// Derived view for the "Currently brewing" card. Kept as a named export
+// so the existing page import keeps working unchanged.
+export const activeBeans: Bag[] = bags.filter((b) => !b.closedDate);
+export const pastBeans: Bag[] = bags.filter((b) => b.closedDate);
 
 // Brew log, newest last. Chart and table derive from this array.
 export const brews: BrewEntry[] = [

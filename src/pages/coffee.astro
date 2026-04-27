@@ -3,6 +3,8 @@ import Base from '../layouts/Base.astro';
 import {
   brews,
   activeBeans,
+  bags,
+  pastBeans,
   rig,
   daysBetween,
   flowRate,
@@ -121,6 +123,28 @@ for (let t = Math.ceil(yMin / 0.25) * 0.25; t <= yMax + 1e-9; t += 0.25) {
 const palette = ['#011f5b', '#a33', '#2a6', '#c70', '#73c'];
 const beanColor = new Map<string, string>();
 [...rawByBean.keys()].forEach((b, i) => beanColor.set(b, palette[i % palette.length]));
+
+// ---------- BAG PICKER ----------
+// Build the dropdown's options. Open bags first, then past bags, with an
+// optgroup separator so they're visually distinct. Default-selected bag is
+// the first open bag (newest open, by openedDate descending) — this is the
+// one whose chart and log rows render visible on first paint.
+const openBags = [...activeBeans].sort((a, b) =>
+  (b.openedDate ?? '').localeCompare(a.openedDate ?? '')
+);
+const closedBags = [...pastBeans].sort((a, b) =>
+  (b.closedDate ?? '').localeCompare(a.closedDate ?? '')
+);
+const defaultBean = openBags[0]?.bean ?? closedBags[0]?.bean ?? '';
+
+// Per-bean shot counts. Used for the Log header meta text — updated client-side
+// when the dropdown changes. Stashed on the section element as a data attribute
+// so the script can read it without another round-trip.
+const shotsByBean: Record<string, number> = {};
+for (const e of brews) {
+  shotsByBean[e.bean] = (shotsByBean[e.bean] ?? 0) + 1;
+}
+const shotsByBeanJSON = JSON.stringify(shotsByBean);
 ---
 <Base
   title="coffee lab · sirius ganesh"
@@ -163,6 +187,36 @@ const beanColor = new Map<string, string>();
       ))}
     </div>
   </section>
+
+  <section class="block bag-picker-block" id="bag-picker" aria-label="Bag selector">
+    <label class="bag-picker-label" for="bag-select">Viewing</label>
+    <select
+      class="bag-picker"
+      id="bag-select"
+      aria-controls="bag-scoped"
+    >
+      {openBags.length > 0 && (
+        <optgroup label="Open">
+          {openBags.map((b) => (
+            <option value={b.bean} selected={b.bean === defaultBean}>
+              {b.bean}{b.roaster ? ` · ${b.roaster}` : ''}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      {closedBags.length > 0 && (
+        <optgroup label="Past">
+          {closedBags.map((b) => (
+            <option value={b.bean} selected={b.bean === defaultBean}>
+              {b.bean}{b.roaster ? ` · ${b.roaster}` : ''}
+            </option>
+          ))}
+        </optgroup>
+      )}
+    </select>
+  </section>
+
+  <div id="bag-scoped" data-selected-bean={defaultBean} data-shots-by-bean={shotsByBeanJSON}>
 
   <section class="block" id="degradation">
     <header>
@@ -261,7 +315,7 @@ const beanColor = new Map<string, string>();
         {[...rawByBean.entries()].map(([bean, points]) => {
           const color = beanColor.get(bean) ?? '#011f5b';
           return (
-            <g>
+            <g data-bean={bean}>
               {points.map((p) => (
                 <circle
                   cx={sx(p.x)} cy={sy(p.y)} r="3"
@@ -283,7 +337,7 @@ const beanColor = new Map<string, string>();
           const color = beanColor.get(bean) ?? '#011f5b';
           const path = days.map((d) => `${sx(d.x).toFixed(1)},${sy(d.y).toFixed(1)}`).join(' ');
           return (
-            <g>
+            <g data-bean={bean}>
               {days.length > 1 && (
                 <polyline
                   points={path}
@@ -305,7 +359,7 @@ const beanColor = new Map<string, string>();
 
       <figcaption class="chart-legend">
         {[...rawByBean.keys()].map((bean) => (
-          <span class="legend-item">
+          <span class="legend-item" data-bean={bean}>
             <span class="legend-dot" style={`background:${beanColor.get(bean)}`}></span>
             {bean}
           </span>
@@ -329,7 +383,7 @@ const beanColor = new Map<string, string>();
   <section class="block" id="log">
     <header>
       <h2>Log</h2>
-      <span class="meta">{brews.length} shots</span>
+      <span class="meta" id="log-shot-count">{shotsByBean[defaultBean] ?? 0} shots</span>
     </header>
 
     <div class="log-table-wrap">
@@ -349,9 +403,16 @@ const beanColor = new Map<string, string>();
           </tr>
         </thead>
         <tbody>
+          {/* Empty-state row per bag with no brews yet. Tagged with data-bean
+              so it inherits the same show/hide filter as real rows. */}
+          {bags.filter((b) => (shotsByBean[b.bean] ?? 0) === 0).map((b) => (
+            <tr class="log-row log-empty" data-bean={b.bean}>
+              <td colspan="10" class="log-empty-cell">No shots logged yet for this bag.</td>
+            </tr>
+          ))}
           {newestFirst.map((e, i) => (
             <>
-              <tr class="log-row">
+              <tr class="log-row" data-bean={e.bean}>
                 <td>{e.date}</td>
                 <td>{daysBetween(e.date, e.roastDate)}d</td>
                 <td>{e.bean}</td>
@@ -383,7 +444,7 @@ const beanColor = new Map<string, string>();
                 </td>
               </tr>
               {e.notes && (
-                <tr class="notes-detail" id={`brew-note-${i}`} hidden>
+                <tr class="notes-detail" id={`brew-note-${i}`} data-bean={e.bean} hidden>
                   <td colspan="10" class="notes-detail-cell">{e.notes}</td>
                 </tr>
               )}
@@ -393,6 +454,8 @@ const beanColor = new Map<string, string>();
       </table>
     </div>
   </section>
+
+  </div>
 
   <script>
     // Notes column disclosure pattern. Each row with notes has a chevron button
@@ -434,5 +497,51 @@ const beanColor = new Map<string, string>();
         btn.setAttribute('aria-expanded', 'false');
       }
     });
+
+    // Bag picker: hide chart elements, legend items, and log rows whose
+    // data-bean does not match the selected option. Also updates the Log
+    // section's shot-count meta text. Filter is applied on load (so the
+    // default-selected bag is correct even if the script runs after first
+    // paint) and again on every change.
+    (() => {
+      const select = document.getElementById('bag-select') as HTMLSelectElement | null;
+      const scope = document.getElementById('bag-scoped');
+      const countEl = document.getElementById('log-shot-count');
+      if (!select || !scope) return;
+
+      let counts: Record<string, number> = {};
+      try {
+        counts = JSON.parse(scope.dataset.shotsByBean ?? '{}');
+      } catch { counts = {}; }
+
+      function applyFilter(bean: string) {
+        scope!.setAttribute('data-selected-bean', bean);
+
+        // Toggle every data-bean element inside the scope.
+        scope!.querySelectorAll<HTMLElement>('[data-bean]').forEach((el) => {
+          const match = el.getAttribute('data-bean') === bean;
+          if (match) {
+            el.style.removeProperty('display');
+          } else {
+            el.style.display = 'none';
+            // If we just hid an open notes-detail row, collapse it so it
+            // doesn't pop open silently when the user switches back.
+            if (el.classList.contains('notes-detail') && !el.hasAttribute('hidden')) {
+              el.setAttribute('hidden', '');
+              const prev = el.previousElementSibling;
+              prev?.querySelector('.notes-toggle')?.setAttribute('aria-expanded', 'false');
+            }
+          }
+        });
+
+        if (countEl) {
+          const n = counts[bean] ?? 0;
+          countEl.textContent = `${n} shot${n === 1 ? '' : 's'}`;
+        }
+      }
+
+      select.addEventListener('change', () => applyFilter(select.value));
+      applyFilter(select.value);
+    })();
   </script>
 </Base>

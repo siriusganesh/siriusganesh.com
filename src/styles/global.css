@@ -812,6 +812,49 @@ footer.page-footer {
 
 .bean-card .bean-meta .sep { margin: 0 0.35rem; }
 
+.bag-picker-block {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.bag-picker-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.bag-picker {
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--navy);
+  padding: 0.4rem 2rem 0.4rem 0.6rem;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+    linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 9px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  min-width: 16rem;
+}
+
+.bag-picker:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+
 .chart {
   margin: 0;
   border: 1px solid var(--border);
@@ -942,6 +985,14 @@ footer.page-footer {
   color: var(--navy);
   border-color: var(--navy);
   background: var(--navy-soft);
+}
+
+.log-table .log-empty-cell {
+  text-align: center;
+  font-style: italic;
+  color: var(--text-faint);
+  padding: 1.4rem 1rem;
+  white-space: normal;
 }
 
 .log-table tr.notes-detail > td.notes-detail-cell {
