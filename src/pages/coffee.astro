@@ -165,29 +165,6 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
 
   <hr class="rule" />
 
-  <section class="block" id="currently-brewing">
-    <header>
-      <h2>Currently brewing</h2>
-      <span class="meta">{activeBeans.length} open</span>
-    </header>
-    <div class="bean-grid">
-      {activeBeans.map((b) => (
-        <div class="bean-card">
-          <div class="bean-name">{b.bean}</div>
-          {b.roaster && <div class="bean-roaster">{b.roaster}</div>}
-          {b.badges && b.badges.length > 0 && (
-            <div class="bean-badges">{b.badges.join(' · ')}</div>
-          )}
-          {b.origin && <div class="bean-origin">{b.origin}</div>}
-          {b.tastingNotes && b.tastingNotes.length > 0 && (
-            <div class="bean-notes">{b.tastingNotes.join(' · ')}</div>
-          )}
-          <div class="bean-age">{daysBetween(today, b.roastDate)}d off roast</div>
-        </div>
-      ))}
-    </div>
-  </section>
-
   <section class="block bag-picker-block" id="bag-picker" aria-label="Bag selector">
     <label class="bag-picker-label" for="bag-select">Viewing</label>
     <select
@@ -217,6 +194,32 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
   </section>
 
   <div id="bag-scoped" data-selected-bean={defaultBean} data-shots-by-bean={shotsByBeanJSON}>
+
+  <section class="block" id="bag-info">
+    <div class="bean-grid">
+      {bags.map((b) => (
+        <div class="bean-card" data-bean={b.bean}>
+          <div class="bean-name">{b.bean}</div>
+          {b.roaster && <div class="bean-roaster">{b.roaster}</div>}
+          {b.badges && b.badges.length > 0 && (
+            <div class="bean-badges">{b.badges.join(' · ')}</div>
+          )}
+          {b.origin && <div class="bean-origin">{b.origin}</div>}
+          {b.tastingNotes && b.tastingNotes.length > 0 && (
+            <div class="bean-notes">{b.tastingNotes.join(' · ')}</div>
+          )}
+          {b.closedDate ? (
+            <div class="bean-age">
+              roasted {b.roastDate}
+              {b.openedDate && ` · open ${b.openedDate} → ${b.closedDate}`}
+            </div>
+          ) : (
+            <div class="bean-age">{daysBetween(today, b.roastDate)}d off roast</div>
+          )}
+        </div>
+      ))}
+    </div>
+  </section>
 
   <section class="block" id="degradation">
     <header>

@@ -59,7 +59,7 @@ export const bags: Bag[] = [
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     openedDate: '2026-04-28',
-    badges: ['single origin', 'light-medium'],
+    badges: ['single origin', 'light'],
     origin: 'Guatemala · El Progreso',
     tastingNotes: ['vanilla', 'peach', 'tangerine'],
   },
