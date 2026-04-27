@@ -48,6 +48,7 @@
    Applies to both #hash navigation and on-load hash landings. */
 html {
   scroll-padding-top: 4rem;
+  scroll-behavior: smooth;
 }
 
 html, body {
@@ -186,6 +187,7 @@ nav.topnav .brand::after {
 
 /* Respect users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   nav.topnav .brand::after { animation: none; opacity: 1; }
 }
 
