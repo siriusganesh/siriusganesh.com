@@ -543,7 +543,23 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
         }
       }
 
-      select.addEventListener('change', () => applyFilter(select.value));
+      // Smooth-scroll target on user-initiated change. Picker section is
+      // intentional: keeps the dropdown in view (handy on mobile if the user
+      // wants to flip bags again) and the bag card lands right below it.
+      // Honors prefers-reduced-motion. The initial applyFilter on page load
+      // does not scroll — that path runs before the change listener is wired.
+      const prefersReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+      const scrollTarget = document.getElementById('bag-picker');
+
+      select.addEventListener('change', () => {
+        applyFilter(select.value);
+        scrollTarget?.scrollIntoView({
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+          block: 'start',
+        });
+      });
       applyFilter(select.value);
     })();
   </script>
