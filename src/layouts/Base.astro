@@ -65,19 +65,24 @@ const docDate = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,
     </footer>
 
     <script>
-      // Brand link points to "/". When the user is already on the homepage,
-      // a click would cause a full reload — instead, smooth-scroll to top.
-      // On other pages (e.g. /coffee) the click navigates normally.
-      document.querySelector('.brand')?.addEventListener('click', (event) => {
-        const link = event.currentTarget as HTMLAnchorElement;
-        const target = new URL(link.href);
-        if (target.pathname === window.location.pathname && !target.hash) {
-          event.preventDefault();
-          const reduced = window.matchMedia(
-            '(prefers-reduced-motion: reduce)'
-          ).matches;
-          window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
-        }
+      // For any topnav link (brand or section link) whose pathname matches the
+      // current page and has no hash, intercept and smooth-scroll to top
+      // instead of triggering a full reload. Cross-page links (e.g. /coffee
+      // from /, or /#experience from /coffee) are left to navigate normally.
+      // Hash-only links to sections on the current page are also left alone —
+      // CSS scroll-behavior on html handles those smoothly.
+      document.querySelectorAll('nav.topnav a').forEach((link) => {
+        link.addEventListener('click', (event) => {
+          const a = event.currentTarget as HTMLAnchorElement;
+          const target = new URL(a.href);
+          if (target.pathname === window.location.pathname && !target.hash) {
+            event.preventDefault();
+            const reduced = window.matchMedia(
+              '(prefers-reduced-motion: reduce)'
+            ).matches;
+            window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+          }
+        });
       });
     </script>
   </body>
