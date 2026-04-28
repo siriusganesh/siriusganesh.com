@@ -71,11 +71,17 @@ const docDate = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,
       // from /, or /#experience from /coffee) are left to navigate normally.
       // Hash-only links to sections on the current page are also left alone —
       // CSS scroll-behavior on html handles those smoothly.
+      // Astro's static build serves pages as directory indexes, so the
+      // browser's pathname is "/coffee/" while the link href resolves to
+      // "/coffee". Strip any trailing slash before comparing so they match.
+      const samePath = (a: string, b: string) =>
+        a.replace(/\/$/, '') === b.replace(/\/$/, '');
+
       document.querySelectorAll('nav.topnav a').forEach((link) => {
         link.addEventListener('click', (event) => {
           const a = event.currentTarget as HTMLAnchorElement;
           const target = new URL(a.href);
-          if (target.pathname === window.location.pathname && !target.hash) {
+          if (samePath(target.pathname, window.location.pathname) && !target.hash) {
             event.preventDefault();
             const reduced = window.matchMedia(
               '(prefers-reduced-motion: reduce)'
