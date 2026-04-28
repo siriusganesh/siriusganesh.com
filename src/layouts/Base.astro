@@ -63,5 +63,22 @@ const docDate = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,
       <span>sirius ganesh · denver, co</span>
       <span>v1.0</span>
     </footer>
+
+    <script>
+      // Brand link points to "/". When the user is already on the homepage,
+      // a click would cause a full reload — instead, smooth-scroll to top.
+      // On other pages (e.g. /coffee) the click navigates normally.
+      document.querySelector('.brand')?.addEventListener('click', (event) => {
+        const link = event.currentTarget as HTMLAnchorElement;
+        const target = new URL(link.href);
+        if (target.pathname === window.location.pathname && !target.hash) {
+          event.preventDefault();
+          const reduced = window.matchMedia(
+            '(prefers-reduced-motion: reduce)'
+          ).matches;
+          window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+        }
+      });
+    </script>
   </body>
 </html>
