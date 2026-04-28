@@ -6,6 +6,7 @@ import {
   bags,
   pastBeans,
   rig,
+  bagBadges,
   daysBetween,
   flowRate,
   ratio,
@@ -201,9 +202,12 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
         <div class="bean-card" data-bean={b.bean}>
           <div class="bean-name">{b.bean}</div>
           {b.roaster && <div class="bean-roaster">{b.roaster}</div>}
-          {b.badges && b.badges.length > 0 && (
-            <div class="bean-badges">{b.badges.join(' · ')}</div>
-          )}
+          {(() => {
+            const badges = bagBadges(b);
+            return badges.length > 0 ? (
+              <div class="bean-badges">{badges.join(' · ')}</div>
+            ) : null;
+          })()}
           {b.origin && <div class="bean-origin">{b.origin}</div>}
           {b.tastingNotes && b.tastingNotes.length > 0 && (
             <div class="bean-notes">{b.tastingNotes.join(' · ')}</div>

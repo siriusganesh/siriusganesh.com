@@ -21,26 +21,44 @@ export type BrewEntry = {
   notes?: string;
 };
 
+// TODO: introduce a stable `bagId` (default: slug(bean) + '-' + roastDate) and
+// switch chart data attrs, log row data attrs, dropdown values, and the
+// shot-count map off of `bean` and onto `bagId`. Without this, buying a second
+// bag of the same bean (different roast date) will conflate them in the UI.
 export type Bag = {
-  bean: string;                 // distinctive display name ("Mokha Java", "Yirgacheffe")
+  bean: string;                 // distinctive display name ("Mokha Java", "El Progreso")
                                 // also acts as the bag's identity / key for filtering.
   roaster?: string;             // shown small/dim under the name
   roastDate: string;            // ISO
   openedDate?: string;
   closedDate?: string;          // when the bag was finished. Empty/undefined = still open.
 
-  // Identification attributes. All optional — only set the ones that apply.
-  // badges: free-text chips shown in small-caps row, e.g.
-  //   ["special release", "blend", "medium"]
-  //   ["single origin", "natural", "medium"]
-  badges?: string[];
+  // Identification attributes. All optional. Rendered as a small-caps badge row
+  // in this canonical order, dropping any that are unset:
+  //   special release · type · process · roast level
+  // Use the bagBadges() helper to derive the row — never hand-write it.
+  specialRelease?: boolean;
+  type?: 'single origin' | 'blend';
+  process?: string;             // washed | natural | honey | anaerobic | etc.
+  roastLevel?: string;          // light | light-medium | medium | medium-dark | dark
+
   // origin: one-line human-readable origin description.
-  //   single origin → "Country · Region" (e.g. "Ethiopia · Yirgacheffe")
+  //   single origin → country (e.g. "Guatemala", "Ethiopia")
   //   blend → mix description (e.g. "African + Pacific Rim")
   origin?: string;
   // tastingNotes: ordered, short. Rendered dot-separated.
   tastingNotes?: string[];
 };
+
+/** Build the badge row in canonical order. Empty fields are skipped. */
+export function bagBadges(b: Bag): string[] {
+  const out: string[] = [];
+  if (b.specialRelease) out.push('special release');
+  if (b.type) out.push(b.type);
+  if (b.process) out.push(b.process);
+  if (b.roastLevel) out.push(b.roastLevel);
+  return out;
+}
 
 // Backward-compatible alias for the old type name.
 export type ActiveBean = Bag;
@@ -55,12 +73,14 @@ export const rig = {
 // "Currently brewing" card filters to open. The bag picker shows both groups.
 export const bags: Bag[] = [
   {
-    bean: 'Guatemala El Progreso',
+    bean: 'El Progreso',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     openedDate: '2026-04-28',
-    badges: ['single origin', 'light'],
-    origin: 'Guatemala · El Progreso',
+    type: 'single origin',
+    process: 'washed',
+    roastLevel: 'light',
+    origin: 'Guatemala',
     tastingNotes: ['vanilla', 'peach', 'tangerine'],
   },
   {
@@ -69,7 +89,9 @@ export const bags: Bag[] = [
     roastDate: '2026-04-14',
     openedDate: '2026-04-19',
     closedDate: '2026-04-28',
-    badges: ['special release', 'blend', 'medium'],
+    specialRelease: true,
+    type: 'blend',
+    roastLevel: 'medium',
     origin: 'African + Pacific Rim',
     tastingNotes: ['fig', 'dried raspberry', 'dark chocolate'],
   },
@@ -355,7 +377,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-04-28',
-    bean: 'Guatemala El Progreso',
+    bean: 'El Progreso',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
