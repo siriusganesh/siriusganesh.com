@@ -197,6 +197,7 @@ nav.topnav ul {
   gap: 1.25rem;
   padding: 0;
   margin: 0;
+  align-items: baseline;
 }
 
 nav.topnav a {
@@ -212,7 +213,9 @@ nav.topnav a:hover { color: var(--navy); }
 /* ---------- Projects dropdown ---------- */
 nav.topnav .has-dropdown { position: relative; }
 
+nav.topnav details { display: inline; }
 nav.topnav details > summary {
+  display: inline;
   list-style: none;
   cursor: pointer;
   font-family: var(--font-mono);
