@@ -50,7 +50,16 @@ const docDate = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,
           <li><a href="/#experience">experience</a></li>
           <li><a href="/#capabilities">capabilities</a></li>
           <li><a href="/#press">press</a></li>
-          <li><a href="/coffee">coffee</a></li>
+          <li class="has-dropdown">
+            <details>
+              <summary>projects</summary>
+              <ul class="dropdown-menu">
+                <li><a href="/coffee">coffee</a></li>
+                <li><a href="https://siriusganesh.github.io/co-14ers/" target="_blank" rel="noopener">colorado 14ers</a></li>
+                <li><a href="https://siriusganesh.github.io/bananagrams-checker/" target="_blank" rel="noopener">bananagrams checker</a></li>
+              </ul>
+            </details>
+          </li>
           <li><a href="/#contact">contact</a></li>
         </ul>
       </div>
@@ -88,7 +97,27 @@ const docDate = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,
             ).matches;
             window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
           }
+          // Collapse any open <details> dropdown after a nav link click so the
+          // menu doesn't linger when navigating away or scrolling to top.
+          const details = a.closest('nav.topnav details');
+          if (details instanceof HTMLDetailsElement) details.open = false;
         });
+      });
+
+      // Close the projects dropdown on outside click or Escape.
+      document.addEventListener('click', (event) => {
+        document.querySelectorAll('nav.topnav details[open]').forEach((d) => {
+          if (!(d as HTMLElement).contains(event.target as Node)) {
+            (d as HTMLDetailsElement).open = false;
+          }
+        });
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          document.querySelectorAll('nav.topnav details[open]').forEach((d) => {
+            (d as HTMLDetailsElement).open = false;
+          });
+        }
       });
     </script>
   </body>

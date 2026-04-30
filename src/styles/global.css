@@ -209,6 +209,56 @@ nav.topnav a {
 
 nav.topnav a:hover { color: var(--navy); }
 
+/* ---------- Projects dropdown ---------- */
+nav.topnav .has-dropdown { position: relative; }
+
+nav.topnav details > summary {
+  list-style: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  user-select: none;
+  white-space: nowrap;
+}
+nav.topnav details > summary::-webkit-details-marker { display: none; }
+nav.topnav details > summary::marker { content: ''; }
+nav.topnav details > summary::after {
+  content: '▾';
+  font-size: 0.65rem;
+  margin-left: 0.3rem;
+  opacity: 0.7;
+  display: inline-block;
+  transition: transform 120ms ease;
+}
+nav.topnav details[open] > summary::after { transform: rotate(180deg); }
+nav.topnav details > summary:hover { color: var(--navy); }
+
+nav.topnav .dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  min-width: 12rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  z-index: 20;
+}
+nav.topnav .dropdown-menu li { padding: 0; }
+nav.topnav .dropdown-menu a {
+  display: block;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.78rem;
+}
+nav.topnav .dropdown-menu a:hover { background: var(--border); color: var(--navy); }
+
 /* ========== HERO ========== */
 .hero {
   padding-top: 3rem;
@@ -690,6 +740,16 @@ footer.page-footer {
   }
   nav.topnav ul::-webkit-scrollbar { display: none; }
   nav.topnav a { white-space: nowrap; }
+
+  /* Dropdown: anchor to the nav itself rather than the li, so the menu isn't
+     clipped by the horizontally-scrolling ul. position:fixed escapes the ul's
+     overflow context entirely. Right edge tracks the page padding. */
+  nav.topnav .dropdown-menu {
+    position: fixed;
+    top: 2.6rem;
+    right: 1rem;
+    left: auto;
+  }
 
   /* Tighten page vertical rhythm */
   .page { padding: 3rem 1.25rem 3rem; }
