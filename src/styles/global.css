@@ -245,20 +245,27 @@ nav.topnav .dropdown-menu {
   right: 0;
   min-width: 12rem;
   background: var(--bg);
-  border: 1px solid var(--border);
-  padding: 0.4rem 0;
+  /* No border on the menu itself: each cell paints its own border on hover,
+     and the menu's outline is provided by the box-shadow below. This keeps
+     all three cells identical in height and width. */
+  border: 0;
+  padding: 0;
   margin: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
+  /* Override the align-items: baseline set on nav.topnav ul (which exists so
+     the projects trigger's baseline matches sibling anchors). Without this,
+     the dropdown's lis shrink to content instead of stretching to menu width. */
+  align-items: stretch;
   gap: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
   z-index: 20;
 }
 nav.topnav .dropdown-menu li { padding: 0; }
 nav.topnav .dropdown-menu a {
   display: block;
-  padding: 0.45rem 0.9rem;
+  padding: 0.55rem 0.9rem;
   font-size: 0.78rem;
   border: 1px solid transparent;
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
