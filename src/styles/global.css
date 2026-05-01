@@ -215,8 +215,7 @@ nav.topnav .has-dropdown { position: relative; }
 
 nav.topnav details { display: inline; }
 nav.topnav details > summary {
-  display: inline-block;
-  vertical-align: baseline;
+  display: inline;
   list-style: none;
   cursor: pointer;
   font-family: var(--font-mono);
@@ -225,15 +224,6 @@ nav.topnav details > summary {
   letter-spacing: 0.04em;
   user-select: none;
   white-space: nowrap;
-  /* Vertical padding + negative margin makes the hover fill the wrap's
-     padding area so the button reaches top and bottom of the nav. The wrap
-     uses 0.9rem vertical padding, so we mirror that here. Horizontal margin
-     pulls the box edge back to roughly the text baseline so neighbors keep
-     their gap; the border draws inside that visual area. */
-  padding: 0.9rem 0.7rem;
-  margin: -0.9rem -0.2rem;
-  border: 1px solid transparent;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 nav.topnav details > summary::-webkit-details-marker { display: none; }
 nav.topnav details > summary::marker { content: ''; }
@@ -247,18 +237,11 @@ nav.topnav details > summary::after {
 }
 nav.topnav details[open] > summary::after { transform: rotate(180deg); }
 nav.topnav details > summary:hover,
-nav.topnav details[open] > summary {
-  color: var(--navy);
-  background: var(--navy-soft);
-  border-color: var(--navy);
-}
+nav.topnav details[open] > summary { color: var(--navy); }
 
 nav.topnav .dropdown-menu {
   position: absolute;
-  /* 100% of li is just the in-flow text height; the summary visually extends
-     0.9rem below that due to the negative bottom margin. Add that back so the
-     menu sits below the highlighted button, not on top of it. */
-  top: calc(100% + 0.9rem);
+  top: calc(100% + 0.4rem);
   right: 0;
   min-width: 12rem;
   background: var(--bg);
@@ -277,8 +260,14 @@ nav.topnav .dropdown-menu a {
   display: block;
   padding: 0.45rem 0.9rem;
   font-size: 0.78rem;
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
-nav.topnav .dropdown-menu a:hover { background: var(--border); color: var(--navy); }
+nav.topnav .dropdown-menu a:hover {
+  background: var(--navy-soft);
+  border-color: var(--navy);
+  color: var(--navy);
+}
 
 /* ========== HERO ========== */
 .hero {
@@ -761,14 +750,6 @@ footer.page-footer {
   }
   nav.topnav ul::-webkit-scrollbar { display: none; }
   nav.topnav a { white-space: nowrap; }
-
-  /* Mobile: ul has overflow-x: auto which forces overflow-y to clip too, so
-     the desktop full-height fill technique would be cropped. Use a tighter
-     button-sized highlight instead. */
-  nav.topnav details > summary {
-    padding: 0.25rem 0.5rem;
-    margin: 0 -0.1rem;
-  }
 
   /* Dropdown: anchor to the nav itself rather than the li, so the menu isn't
      clipped by the horizontally-scrolling ul. position:fixed escapes the ul's
