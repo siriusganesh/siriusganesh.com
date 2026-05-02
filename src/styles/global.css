@@ -771,12 +771,16 @@ footer.page-footer {
   .hero-portrait { margin-top: 0; max-width: 220px; }
   .about-gallery { grid-template-columns: repeat(2, 1fr); }
 
-  /* Nav: allow horizontal scroll instead of wrapping */
+  /* Nav: allow horizontal scroll instead of wrapping.
+     Note: -webkit-overflow-scrolling: touch was removed — iOS Safari
+     paints position:fixed descendants of a touch-scrolling container
+     once on open and then drops them on the next composite, while
+     still hit-testing. The projects dropdown was flashing then going
+     blank as a result. iOS 13+ does momentum scrolling by default. */
   nav.topnav ul {
     gap: 1rem;
     overflow-x: auto;
     flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
   nav.topnav ul::-webkit-scrollbar { display: none; }
