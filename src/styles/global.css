@@ -276,6 +276,27 @@ nav.topnav .dropdown-menu a:hover {
   color: var(--navy);
 }
 
+/* The current page's own item in the dropdown is dimmed and not clickable.
+   Suppresses the navy hover treatment so it reads as a state, not a target. */
+nav.topnav .dropdown-menu a.is-current,
+nav.topnav .dropdown-menu a.is-current:hover {
+  color: var(--text-faint);
+  background: transparent;
+  border-color: transparent;
+  pointer-events: none;
+  cursor: default;
+}
+
+/* External-target arrow inside the projects dropdown. Press cards already
+   style .ext-arrow for their own h3 context; this rule scopes a smaller,
+   dimmer mark to the menu without disturbing the cards. */
+nav.topnav .dropdown-menu .ext-arrow {
+  font-size: 0.85em;
+  color: var(--text-faint);
+  margin-left: 0.15rem;
+}
+nav.topnav .dropdown-menu a:hover .ext-arrow { color: var(--navy); }
+
 /* ========== HERO ========== */
 .hero {
   padding-top: 3rem;

@@ -274,7 +274,7 @@ export const press: PressItem[] = [
 // belongs in Experience, not here.
 export const aboutParagraphsHtml: string[] = [
   `Off the clock: <a href="/coffee">espresso</a> (still chasing the god shot on a Lelit), RC aviation
-   (EDF jets and collective-pitch helis), and as much Colorado Rockies trail time as
+   (EDF jets and collective-pitch helis), and as much <a href="https://siriusganesh.github.io/co-14ers/" target="_blank" rel="noopener">Colorado Rockies</a> trail time as
    the calendar allows. <strong>Maple</strong> — our golden retriever and unofficial
    chief morale officer — shows up on most of the good ones.`,
 ];

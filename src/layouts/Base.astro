@@ -10,6 +10,15 @@ const {
 } = Astro.props;
 const today = new Date();
 const docDate = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,'0')}.${String(today.getDate()).padStart(2,'0')}`;
+
+// Normalised current path used to mark the active project in the projects
+// dropdown. Astro's static build serves directory indexes, so the pathname
+// for the coffee page is "/coffee/". Strip the trailing slash for clean
+// equality checks. The dropdown only contains /coffee from the apex domain;
+// the other items live on github.io and can never match the current Astro
+// page, so we only need an isCoffee flag here.
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isCoffee = currentPath === '/coffee';
 ---
 <!doctype html>
 <html lang="en">
@@ -45,22 +54,32 @@ const docDate = `${today.getFullYear()}.${String(today.getMonth()+1).padStart(2,
   <body>
     <nav class="topnav">
       <div class="wrap">
-        <a href="/" class="brand">sirius ganesh</a>
+        <a href="https://siriusganesh.com/" class="brand">sirius ganesh</a>
         <ul>
-          <li><a href="/#experience">experience</a></li>
-          <li><a href="/#capabilities">capabilities</a></li>
-          <li><a href="/#press">press</a></li>
           <li class="has-dropdown">
             <details>
               <summary>projects</summary>
               <ul class="dropdown-menu">
-                <li><a href="/coffee">coffee</a></li>
-                <li><a href="https://siriusganesh.github.io/co-14ers/" target="_blank" rel="noopener">colorado 14ers</a></li>
-                <li><a href="https://siriusganesh.github.io/bananagrams-checker/" target="_blank" rel="noopener">bananagrams checker</a></li>
+                <li>
+                  <a
+                    href="/coffee"
+                    class:list={[isCoffee && 'is-current']}
+                    aria-current={isCoffee ? 'page' : undefined}
+                  >coffee</a>
+                </li>
+                <li>
+                  <a href="https://siriusganesh.github.io/co-14ers/" target="_blank" rel="noopener">
+                    colorado 14ers <span class="ext-arrow" aria-hidden="true">↗</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://siriusganesh.github.io/bananagrams-checker/" target="_blank" rel="noopener">
+                    bananagrams <span class="ext-arrow" aria-hidden="true">↗</span>
+                  </a>
+                </li>
               </ul>
             </details>
           </li>
-          <li><a href="/#contact">contact</a></li>
         </ul>
       </div>
     </nav>
