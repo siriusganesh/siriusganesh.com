@@ -121,7 +121,7 @@ for (let t = Math.ceil(yMin / 0.25) * 0.25; t <= yMax + 1e-9; t += 0.25) {
 }
 
 // Color palette cycled per bean
-const palette = ['#011f5b', '#a33', '#2a6', '#c70', '#73c'];
+const palette = ['#011f5b', '#990000', '#2a6', '#c70', '#73c'];
 const beanColor = new Map<string, string>();
 [...rawByBean.keys()].forEach((b, i) => beanColor.set(b, palette[i % palette.length]));
 
