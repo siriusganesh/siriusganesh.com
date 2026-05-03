@@ -39,7 +39,7 @@ export type ExperienceEntry = {
   location: string;
   when: string;         // e.g. "JAN 2025 — PRESENT"
   bulletsHtml: string[]; // inline HTML allowed in each bullet
-  image?: { src: string; alt: string }; // optional banner image at top of entry
+  image?: { src: string; alt: string; srcset?: string; sizes?: string }; // optional banner image at top of entry
 };
 
 export const experience: ExperienceEntry[] = [
@@ -51,6 +51,8 @@ export const experience: ExperienceEntry[] = [
     image: {
       src: "/images/pickle-banner.webp",
       alt: "Pickle Robot — Physical AI for Supply Chain Automation (gripper)",
+      srcset: "/images/pickle-banner-mobile.webp 800w, /images/pickle-banner.webp 1584w",
+      sizes: "(max-width: 720px) 400px, 760px",
     },
     bulletsHtml: [
       "Manage a team of 7 deployment engineers — hiring, performance, and development — across 9 active customer sites running autonomous truck-unloading robots.",
@@ -68,6 +70,8 @@ export const experience: ExperienceEntry[] = [
     image: {
       src: "/images/geekplus-banner.webp",
       alt: "Geek+ — One-Stop Partner For Warehouse Robotics",
+      srcset: "/images/geekplus-banner-mobile.webp 800w, /images/geekplus-banner.webp 1600w",
+      sizes: "(max-width: 720px) 400px, 760px",
     },
     bulletsHtml: [
       "Advised enterprise customers on AMR deployments, including <strong>UPS Happy Returns' first automated returns hub</strong> (150 robots) — reduced return processing time by 35%.",

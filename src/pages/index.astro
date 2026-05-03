@@ -34,7 +34,7 @@ import {
       <figure class="hero-portrait">
         <img
           src={heroPortrait.src}
-          srcset="/images/sirius-wife-hero-400w.webp 600w, /images/sirius-wife-hero.webp 1200w"
+          srcset="/images/sirius-wife-hero-360w.webp 360w, /images/sirius-wife-hero-400w.webp 600w, /images/sirius-wife-hero.webp 1200w"
           sizes="(max-width: 560px) 180px, (max-width: 720px) 220px, 300px"
           alt={heroPortrait.alt}
           loading="eager"
@@ -57,7 +57,14 @@ import {
       <div class="experience-item">
         {job.image && (
           <div class="experience-image">
-            <img src={job.image.src} alt={job.image.alt} loading="lazy" decoding="async" />
+            <img
+              src={job.image.src}
+              srcset={job.image.srcset}
+              sizes={job.image.sizes}
+              alt={job.image.alt}
+              loading="lazy"
+              decoding="async"
+            />
           </div>
         )}
         <div>
