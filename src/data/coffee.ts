@@ -44,7 +44,7 @@ export type Bag = {
   //   special release · type · process · roast level
   // Use the bagBadges() helper to derive the row — never hand-write it.
   specialRelease?: boolean;
-  type?: 'single origin' | 'blend';
+  type?: 'single origin' | 'blend' | 'espresso blend';
   process?: string;             // washed | natural | honey | anaerobic | etc.
   roastLevel?: string;          // light | light-medium | medium | medium-dark | dark
 
@@ -114,11 +114,23 @@ export const bags: Bag[] = [
     bean: 'Dulzura',
     roaster: 'La Cosecha',
     roastDate: '2026-05-04',
-    type: 'blend',
+    type: 'espresso blend',
     roastLevel: 'medium-dark',
     origin: 'Latin American',
     tastingNotes: ['rich crema', 'velvety body', 'sweet finish'],
     chartColor: '#a8442e',
+  },
+  {
+    // Coming soon: bought, not yet opened. Will get an openedDate when cracked.
+    bean: 'Yirgacheffe',
+    roaster: 'La Cosecha',
+    roastDate: '2026-05-04',
+    type: 'single origin',
+    process: 'natural',
+    roastLevel: 'light-medium',
+    origin: 'Ethiopia',
+    tastingNotes: ['plum', 'black tea', 'apricot'],
+    chartColor: '#b07a1c',
   },
 ];
 
