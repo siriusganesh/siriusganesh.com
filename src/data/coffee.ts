@@ -30,8 +30,14 @@ export type Bag = {
                                 // also acts as the bag's identity / key for filtering.
   roaster?: string;             // shown small/dim under the name
   roastDate: string;            // ISO
+
+  // Lifecycle dates. Combination determines which optgroup the dropdown puts
+  // this bag into:
+  //   no openedDate, no closedDate  → Coming soon (bought but unopened)
+  //   openedDate set,  no closedDate → Open
+  //   closedDate set                 → Past
   openedDate?: string;
-  closedDate?: string;          // when the bag was finished. Empty/undefined = still open.
+  closedDate?: string;          // when the bag was finished.
 
   // Identification attributes. All optional. Rendered as a small-caps badge row
   // in this canonical order, dropping any that are unset:
@@ -48,6 +54,17 @@ export type Bag = {
   origin?: string;
   // tastingNotes: ordered, short. Rendered dot-separated.
   tastingNotes?: string[];
+
+  // photo: path (relative to /public) of the bag photo shown on the right of
+  // the bean card. Optional — omit if no photo on hand yet.
+  photo?: string;
+  photoAlt?: string;
+
+  // chartColor: hex color used for this bag's series in the degradation chart
+  // (and the matching legend swatch). Picked to be congruous with the bag's
+  // packaging while keeping enough contrast against the cream chart canvas.
+  // Optional — falls back to the cycled palette if omitted.
+  chartColor?: string;
 };
 
 /** Build the badge row in canonical order. Empty fields are skipped. */
@@ -69,8 +86,8 @@ export const rig = {
   grinder: 'DF64',
 };
 
-// All bags — open (no closedDate) and past (with closedDate).
-// "Currently brewing" card filters to open. The bag picker shows both groups.
+// All bags — coming soon (no dates), open (openedDate, no closedDate), past
+// (closedDate). The bag picker shows three optgroups in that order.
 export const bags: Bag[] = [
   {
     bean: 'El Progreso',
@@ -82,6 +99,9 @@ export const bags: Bag[] = [
     roastLevel: 'light',
     origin: 'Guatemala',
     tastingNotes: ['vanilla', 'peach', 'tangerine'],
+    photo: '/images/coffee/Guatemala_2026.webp',
+    photoAlt: 'La Cosecha El Progreso bag — green packaging',
+    chartColor: '#1f7a3a',
   },
   {
     bean: 'Mokha Java',
@@ -94,12 +114,30 @@ export const bags: Bag[] = [
     roastLevel: 'medium',
     origin: 'African + Pacific Rim',
     tastingNotes: ['fig', 'dried raspberry', 'dark chocolate'],
+    photo: '/images/coffee/Mokha_Java_2026.webp',
+    photoAlt: 'La Cosecha Mokha Java bag — sky blue packaging',
+    chartColor: '#3a73a8',
+  },
+  {
+    // Coming soon: bought, not yet opened. Will get an openedDate when cracked.
+    bean: 'Dulzura',
+    roaster: 'La Cosecha',
+    roastDate: '2026-05-04',
+    type: 'blend',
+    roastLevel: 'medium-dark',
+    origin: 'Latin American',
+    tastingNotes: ['rich crema', 'velvety body', 'sweet finish'],
+    photo: '/images/coffee/Dulzura_Blend_2026.webp',
+    photoAlt: 'La Cosecha Dulzura espresso blend bag — terracotta packaging',
+    chartColor: '#a8442e',
   },
 ];
 
-// Derived view for the "Currently brewing" card. Kept as a named export
-// so the existing page import keeps working unchanged.
-export const activeBeans: Bag[] = bags.filter((b) => !b.closedDate);
+// Derived views. activeBeans = bags currently being brewed (drives the
+// "Currently brewing" card). comingSoonBeans = bought but not yet opened.
+// pastBeans = finished bags. Kept as named exports so page imports stay flat.
+export const activeBeans: Bag[] = bags.filter((b) => b.openedDate && !b.closedDate);
+export const comingSoonBeans: Bag[] = bags.filter((b) => !b.openedDate && !b.closedDate);
 export const pastBeans: Bag[] = bags.filter((b) => b.closedDate);
 
 // Brew log, newest last. Chart and table derive from this array.
