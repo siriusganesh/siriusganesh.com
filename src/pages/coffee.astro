@@ -235,6 +235,24 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
           {b.tastingNotes && b.tastingNotes.length > 0 && (
             <div class="bean-notes">{b.tastingNotes.join(' · ')}</div>
           )}
+          {/* Optional single-origin detail block. Each row only renders when
+              the field is set, so blends and minimal entries collapse cleanly. */}
+          {(b.producer || b.elevation || (b.varieties && b.varieties.length > 0) || b.harvest) && (
+            <table class="bean-details">
+              {b.producer && (
+                <tr><td>producer</td><td>{b.producer}</td></tr>
+              )}
+              {b.elevation && (
+                <tr><td>elevation</td><td>{b.elevation}</td></tr>
+              )}
+              {b.varieties && b.varieties.length > 0 && (
+                <tr><td>varieties</td><td>{b.varieties.join(', ')}</td></tr>
+              )}
+              {b.harvest && (
+                <tr><td>harvest</td><td>{b.harvest}</td></tr>
+              )}
+            </table>
+          )}
           {/* Bag age/lifecycle line. Three states:
               - Past  (closedDate set): roasted X · open Y → Z
               - Coming soon (no openedDate, no closedDate): roasted X (not yet opened)

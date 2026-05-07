@@ -900,6 +900,33 @@ footer.page-footer {
   margin-bottom: 0.65rem;
 }
 
+.bean-card .bean-details {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.5rem;
+}
+
+.bean-card .bean-details td {
+  padding: 0.1rem 0;
+  vertical-align: top;
+}
+
+.bean-card .bean-details td:first-child {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  width: 5.5rem;
+  white-space: nowrap;
+  padding-right: 0.5rem;
+}
+
+.bean-card .bean-details td:last-child {
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
 .bean-card .bean-age {
   font-family: var(--font-mono);
   font-size: 0.72rem;
