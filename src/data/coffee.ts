@@ -55,15 +55,10 @@ export type Bag = {
   // tastingNotes: ordered, short. Rendered dot-separated.
   tastingNotes?: string[];
 
-  // photo: path (relative to /public) of the bag photo shown on the right of
-  // the bean card. Optional — omit if no photo on hand yet.
-  photo?: string;
-  photoAlt?: string;
-
   // chartColor: hex color used for this bag's series in the degradation chart
-  // (and the matching legend swatch). Picked to be congruous with the bag's
-  // packaging while keeping enough contrast against the cream chart canvas.
-  // Optional — falls back to the cycled palette if omitted.
+  // (and the matching legend swatch). Sampled from the bag's packaging so
+  // each bean reads the same on the chart as in the real world. Optional —
+  // falls back to the cycled palette if omitted.
   chartColor?: string;
 };
 
@@ -99,8 +94,6 @@ export const bags: Bag[] = [
     roastLevel: 'light',
     origin: 'Guatemala',
     tastingNotes: ['vanilla', 'peach', 'tangerine'],
-    photo: '/images/coffee/Guatemala_2026.webp',
-    photoAlt: 'La Cosecha El Progreso bag — green packaging',
     chartColor: '#1f7a3a',
   },
   {
@@ -114,8 +107,6 @@ export const bags: Bag[] = [
     roastLevel: 'medium',
     origin: 'African + Pacific Rim',
     tastingNotes: ['fig', 'dried raspberry', 'dark chocolate'],
-    photo: '/images/coffee/Mokha_Java_2026.webp',
-    photoAlt: 'La Cosecha Mokha Java bag — sky blue packaging',
     chartColor: '#3a73a8',
   },
   {
@@ -127,8 +118,6 @@ export const bags: Bag[] = [
     roastLevel: 'medium-dark',
     origin: 'Latin American',
     tastingNotes: ['rich crema', 'velvety body', 'sweet finish'],
-    photo: '/images/coffee/Dulzura_Blend_2026.webp',
-    photoAlt: 'La Cosecha Dulzura espresso blend bag — terracotta packaging',
     chartColor: '#a8442e',
   },
 ];

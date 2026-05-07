@@ -864,51 +864,6 @@ footer.page-footer {
   border-left: 3px solid var(--navy);
   padding: 0.9rem 1rem;
   background: var(--bg-tint);
-  /* Two-column layout: text on the left, optional bag photo on the right.
-     Cards without a photo collapse to a single text column thanks to the
-     missing photo cell — grid auto-fills when one of the two children is
-     absent. */
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem;
-  align-items: start;
-}
-
-.bean-card .bean-card-text {
-  min-width: 0;
-}
-
-.bean-card-photo {
-  /* Clamp photo height so a tall bag image doesn't blow out the card. The
-     img's aspect ratio is preserved. */
-  width: clamp(120px, 22vw, 200px);
-  flex-shrink: 0;
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.bean-card-photo img {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 260px;
-  object-fit: contain;
-}
-
-@media (max-width: 480px) {
-  /* On narrow screens, stack the photo above the text rather than letting it
-     squeeze the text column. */
-  .bean-card {
-    grid-template-columns: 1fr;
-  }
-  .bean-card-photo {
-    order: -1;
-    width: 100%;
-    max-width: 220px;
-    margin: 0 auto;
-  }
 }
 
 .bean-card .bean-name {

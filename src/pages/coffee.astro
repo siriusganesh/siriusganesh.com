@@ -223,38 +223,31 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
     <div class="bean-grid">
       {bags.map((b) => (
         <div class="bean-card" data-bean={b.bean}>
-          <div class="bean-card-text">
-            <div class="bean-name">{b.bean}</div>
-            {b.roaster && <div class="bean-roaster">{b.roaster}</div>}
-            {(() => {
-              const badges = bagBadges(b);
-              return badges.length > 0 ? (
-                <div class="bean-badges">{badges.join(' · ')}</div>
-              ) : null;
-            })()}
-            {b.origin && <div class="bean-origin">{b.origin}</div>}
-            {b.tastingNotes && b.tastingNotes.length > 0 && (
-              <div class="bean-notes">{b.tastingNotes.join(' · ')}</div>
-            )}
-            {/* Bag age/lifecycle line. Three states:
-                - Past  (closedDate set): roasted X · open Y → Z
-                - Coming soon (no openedDate, no closedDate): roasted X (not yet opened)
-                - Open  (openedDate, no closedDate): Nd off roast */}
-            {b.closedDate ? (
-              <div class="bean-age">
-                roasted {b.roastDate}
-                {b.openedDate && ` · open ${b.openedDate} → ${b.closedDate}`}
-              </div>
-            ) : !b.openedDate ? (
-              <div class="bean-age">roasted {b.roastDate} · not yet opened</div>
-            ) : (
-              <div class="bean-age">{daysBetween(today, b.roastDate)}d off roast</div>
-            )}
-          </div>
-          {b.photo && (
-            <div class="bean-card-photo">
-              <img src={b.photo} alt={b.photoAlt ?? `${b.bean} bag`} loading="lazy" />
+          <div class="bean-name">{b.bean}</div>
+          {b.roaster && <div class="bean-roaster">{b.roaster}</div>}
+          {(() => {
+            const badges = bagBadges(b);
+            return badges.length > 0 ? (
+              <div class="bean-badges">{badges.join(' · ')}</div>
+            ) : null;
+          })()}
+          {b.origin && <div class="bean-origin">{b.origin}</div>}
+          {b.tastingNotes && b.tastingNotes.length > 0 && (
+            <div class="bean-notes">{b.tastingNotes.join(' · ')}</div>
+          )}
+          {/* Bag age/lifecycle line. Three states:
+              - Past  (closedDate set): roasted X · open Y → Z
+              - Coming soon (no openedDate, no closedDate): roasted X (not yet opened)
+              - Open  (openedDate, no closedDate): Nd off roast */}
+          {b.closedDate ? (
+            <div class="bean-age">
+              roasted {b.roastDate}
+              {b.openedDate && ` · open ${b.openedDate} → ${b.closedDate}`}
             </div>
+          ) : !b.openedDate ? (
+            <div class="bean-age">roasted {b.roastDate} · not yet opened</div>
+          ) : (
+            <div class="bean-age">{daysBetween(today, b.roastDate)}d off roast</div>
           )}
         </div>
       ))}
