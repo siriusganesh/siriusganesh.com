@@ -26,8 +26,10 @@ export type BrewEntry = {
 // shot-count map off of `bean` and onto `bagId`. Without this, buying a second
 // bag of the same bean (different roast date) will conflate them in the UI.
 export type Bag = {
-  bean: string;                 // distinctive display name ("Mokha Java", "El Progreso")
-                                // also acts as the bag's identity / key for filtering.
+  bean: string;                 // display name. Country-only for single origins
+                                // ("Guatemala", "Ethiopia"), distinctive name for
+                                // blends ("Mokha Java", "Dulzura"). Also acts as
+                                // the bag's identity / key for filtering.
   roaster?: string;             // shown small/dim under the name
   roastDate: string;            // ISO
 
@@ -45,15 +47,23 @@ export type Bag = {
   // Use the bagBadges() helper to derive the row — never hand-write it.
   specialRelease?: boolean;
   type?: 'single origin' | 'blend' | 'espresso blend';
-  process?: string;             // washed | natural | honey | anaerobic | etc.
-  roastLevel?: string;          // light | light-medium | medium | medium-dark | dark
+  process?: 'washed' | 'honey' | 'natural' | 'anaerobic';
+  roastLevel?: 'light' | 'light-medium' | 'medium' | 'medium-dark' | 'dark';
 
   // origin: one-line human-readable origin description.
-  //   single origin → country (e.g. "Guatemala", "Ethiopia")
-  //   blend → mix description (e.g. "African + Pacific Rim")
+  //   single origin → region/country (e.g. "El Progreso, Guatemala", "Yirgacheffe, Ethiopia")
+  //   blend → mix description (e.g. "Brazil + Mexico", "Papua New Guinea + Ethiopia")
+  // When the bean name is country-only, origin carries the regional precision.
   origin?: string;
-  // tastingNotes: ordered, short. Rendered dot-separated.
+  // tastingNotes: ordered, short flavor descriptors. Rendered dot-separated.
   tastingNotes?: string[];
+
+  // Optional single-origin detail fields. Rendered in a small key:value table
+  // below tasting notes (rows render only when set). Blends typically omit.
+  producer?: string;            // farm or smallholder group
+  elevation?: string;           // free-text MASL ("1,800 MASL", "1,700–1,800 MASL")
+  varieties?: string[];         // cultivar names
+  harvest?: string;             // month range ("April–May", "November–April")
 
   // chartColor: hex color used for this bag's series in the degradation chart
   // (and the matching legend swatch). Sampled from the bag's packaging so
@@ -85,15 +95,19 @@ export const rig = {
 // (closedDate). The bag picker shows three optgroups in that order.
 export const bags: Bag[] = [
   {
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     openedDate: '2026-04-28',
     type: 'single origin',
     process: 'washed',
     roastLevel: 'light',
-    origin: 'Guatemala',
+    origin: 'El Progreso, Guatemala',
     tastingNotes: ['vanilla', 'peach', 'tangerine'],
+    producer: 'Las Moritas',
+    elevation: '1,700–1,800 MASL',
+    varieties: ['Bourbon', 'Castillo', 'Pacamara', 'Pache'],
+    harvest: 'April–May',
     chartColor: '#1f7a3a',
   },
   {
@@ -105,7 +119,7 @@ export const bags: Bag[] = [
     specialRelease: true,
     type: 'blend',
     roastLevel: 'medium',
-    origin: 'African + Pacific Rim',
+    origin: 'Papua New Guinea + Ethiopia',
     tastingNotes: ['fig', 'dried raspberry', 'dark chocolate'],
     chartColor: '#3a73a8',
   },
@@ -116,20 +130,24 @@ export const bags: Bag[] = [
     roastDate: '2026-05-04',
     type: 'espresso blend',
     roastLevel: 'medium-dark',
-    origin: 'Latin American',
+    origin: 'Brazil + Mexico',
     tastingNotes: ['rich crema', 'velvety body', 'sweet finish'],
     chartColor: '#a8442e',
   },
   {
     // Coming soon: bought, not yet opened. Will get an openedDate when cracked.
-    bean: 'Yirgacheffe',
+    bean: 'Ethiopia',
     roaster: 'La Cosecha',
     roastDate: '2026-05-04',
     type: 'single origin',
     process: 'natural',
-    roastLevel: 'light-medium',
-    origin: 'Ethiopia',
+    roastLevel: 'light',
+    origin: 'Yirgacheffe, Ethiopia',
     tastingNotes: ['plum', 'black tea', 'apricot'],
+    producer: 'Biloya smallholder farms',
+    elevation: '1,800 MASL',
+    varieties: ['Ethiopian Heirloom'],
+    harvest: 'November–April',
     chartColor: '#b07a1c',
   },
 ];
@@ -416,7 +434,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-04-28',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -431,7 +449,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-04-29',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -446,7 +464,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-04-29',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -460,7 +478,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-04-30',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -474,7 +492,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-01',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -489,7 +507,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-01',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.6,
@@ -503,7 +521,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-02',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -517,7 +535,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-02',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -531,7 +549,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-02',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -546,7 +564,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-03',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -560,7 +578,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-03',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -574,7 +592,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-04',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.6,
@@ -589,7 +607,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-05',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
@@ -603,7 +621,7 @@ export const brews: BrewEntry[] = [
   },
   {
     date: '2026-05-05',
-    bean: 'El Progreso',
+    bean: 'Guatemala',
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     doseG: 15.5,
