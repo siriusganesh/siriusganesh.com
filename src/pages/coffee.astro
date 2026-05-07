@@ -5,6 +5,7 @@ import {
   activeBeans,
   bags,
   pastBeans,
+  comingSoonBeans,
   rig,
   bagBadges,
   daysBetween,
@@ -120,23 +121,36 @@ for (let t = Math.ceil(yMin / 0.25) * 0.25; t <= yMax + 1e-9; t += 0.25) {
   yTicks.push(Number(t.toFixed(2)));
 }
 
-// Color palette cycled per bean
+// Per-bean chart color. Prefer the bag's explicit `chartColor` (chosen to
+// match the bag's packaging) so each bean reads the same on the chart, on the
+// legend, and on the dot in the bean card. Fall back to a cycled palette if a
+// bag hasn't set one yet, or if a bean appears in the brew log without a
+// matching Bag entry.
 const palette = ['#011f5b', '#990000', '#2a6', '#c70', '#73c'];
 const beanColor = new Map<string, string>();
-[...rawByBean.keys()].forEach((b, i) => beanColor.set(b, palette[i % palette.length]));
+const bagColorByBean = new Map(bags.map((b) => [b.bean, b.chartColor]));
+[...rawByBean.keys()].forEach((b, i) => {
+  beanColor.set(b, bagColorByBean.get(b) ?? palette[i % palette.length]);
+});
 
 // ---------- BAG PICKER ----------
-// Build the dropdown's options. Open bags first, then past bags, with an
-// optgroup separator so they're visually distinct. Default-selected bag is
-// the first open bag (newest open, by openedDate descending) — this is the
-// one whose chart and log rows render visible on first paint.
+// Build the dropdown's options in three optgroups, in this order:
+//   1. Open         (default-selected)
+//   2. Coming soon  (bought, not yet opened)
+//   3. Past         (finished)
+// The dropdown label uses `bean · roastDate` rather than `bean · roaster` so
+// repeat purchases of the same bean (different roast date) stay distinct in
+// the picker.
 const openBags = [...activeBeans].sort((a, b) =>
   (b.openedDate ?? '').localeCompare(a.openedDate ?? '')
+);
+const comingSoonBags = [...comingSoonBeans].sort((a, b) =>
+  b.roastDate.localeCompare(a.roastDate)
 );
 const closedBags = [...pastBeans].sort((a, b) =>
   (b.closedDate ?? '').localeCompare(a.closedDate ?? '')
 );
-const defaultBean = openBags[0]?.bean ?? closedBags[0]?.bean ?? '';
+const defaultBean = openBags[0]?.bean ?? comingSoonBags[0]?.bean ?? closedBags[0]?.bean ?? '';
 
 // Per-bean shot counts. Used for the Log header meta text — updated client-side
 // when the dropdown changes. Stashed on the section element as a data attribute
@@ -177,7 +191,16 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
         <optgroup label="Open">
           {openBags.map((b) => (
             <option value={b.bean} selected={b.bean === defaultBean}>
-              {b.bean}{b.roaster ? ` · ${b.roaster}` : ''}
+              {b.bean} · {b.roastDate}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      {comingSoonBags.length > 0 && (
+        <optgroup label="Coming soon">
+          {comingSoonBags.map((b) => (
+            <option value={b.bean} selected={b.bean === defaultBean}>
+              {b.bean} · {b.roastDate}
             </option>
           ))}
         </optgroup>
@@ -186,7 +209,7 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
         <optgroup label="Past">
           {closedBags.map((b) => (
             <option value={b.bean} selected={b.bean === defaultBean}>
-              {b.bean}{b.roaster ? ` · ${b.roaster}` : ''}
+              {b.bean} · {b.roastDate}
             </option>
           ))}
         </optgroup>
@@ -212,11 +235,17 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
           {b.tastingNotes && b.tastingNotes.length > 0 && (
             <div class="bean-notes">{b.tastingNotes.join(' · ')}</div>
           )}
+          {/* Bag age/lifecycle line. Three states:
+              - Past  (closedDate set): roasted X · open Y → Z
+              - Coming soon (no openedDate, no closedDate): roasted X (not yet opened)
+              - Open  (openedDate, no closedDate): Nd off roast */}
           {b.closedDate ? (
             <div class="bean-age">
               roasted {b.roastDate}
               {b.openedDate && ` · open ${b.openedDate} → ${b.closedDate}`}
             </div>
+          ) : !b.openedDate ? (
+            <div class="bean-age">roasted {b.roastDate} · not yet opened</div>
           ) : (
             <div class="bean-age">{daysBetween(today, b.roastDate)}d off roast</div>
           )}
