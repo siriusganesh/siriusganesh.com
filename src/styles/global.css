@@ -52,6 +52,10 @@
 html {
   scroll-padding-top: 4rem;
   scroll-behavior: smooth;
+  /* Reserve scrollbar gutter on every page so short pages (e.g. /coffee, sub-
+     sites, mobile breakpoints with no overflow) don't horizontally shift the
+     centered content column relative to long pages. */
+  scrollbar-gutter: stable;
 }
 
 html, body {
@@ -119,7 +123,10 @@ strong { color: var(--text-heading); font-weight: 700; }
   text-transform: uppercase;
   color: var(--text-dim);
   display: block;
-  margin-bottom: 1.25rem;
+  /* Tight kicker→title gap so the overline reads as a label for the h1
+     beneath it; h1's own 1.25rem margin-bottom keeps the title→body break
+     visibly larger than this internal gap. */
+  margin-bottom: 0.75rem;
 }
 
 .accent { color: var(--red); }
