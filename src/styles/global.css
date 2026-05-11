@@ -857,7 +857,7 @@ footer.page-footer {
 
 /* ========== COFFEE LAB ========== */
 
-.coffee-hero { padding-top: 2rem; padding-bottom: 0.5rem; }
+.coffee-hero { padding-top: 3rem; padding-bottom: 0.5rem; }
 .coffee-hero .hero-text { max-width: var(--measure); }
 
 .bean-grid {
