@@ -99,6 +99,7 @@ export const bags: Bag[] = [
     roaster: 'La Cosecha',
     roastDate: '2026-04-14',
     openedDate: '2026-04-28',
+    closedDate: '2026-05-12',
     type: 'single origin',
     process: 'washed',
     roastLevel: 'light',
