@@ -70,7 +70,7 @@ export const experience: ExperienceEntry[] = [
     image: {
       src: "/images/geekplus-banner.webp",
       alt: "Geek+ — One-Stop Partner For Warehouse Robotics",
-      srcset: "/images/geekplus-banner-mobile.webp 800w, /images/geekplus-banner.webp 1600w",
+      srcset: "/images/geekplus-banner-mobile.webp 700w, /images/geekplus-banner.webp 1600w",
       sizes: "(max-width: 720px) 400px, 760px",
     },
     bulletsHtml: [
