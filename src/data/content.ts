@@ -101,6 +101,11 @@ export const experience: ExperienceEntry[] = [
 export const educationBanner = {
   src: "/images/uiuc-campus.webp",
   alt: "University of Illinois Urbana-Champaign main quad",
+  srcset: "/images/uiuc-campus-mobile.webp 800w, /images/uiuc-campus.webp 1600w",
+  // .edu-banner img is width: 100% inside the content column (page-max 880px),
+  // so the rendered width tracks the viewport up to ~840px. Mirrors the
+  // experience banner sizes pattern.
+  sizes: "(max-width: 720px) 100vw, 840px",
 };
 
 export type School = {

@@ -132,7 +132,14 @@ import {
     </header>
 
     <figure class="edu-banner">
-      <img src={educationBanner.src} alt={educationBanner.alt} loading="lazy" decoding="async" />
+      <img
+        src={educationBanner.src}
+        srcset={educationBanner.srcset}
+        sizes={educationBanner.sizes}
+        alt={educationBanner.alt}
+        loading="lazy"
+        decoding="async"
+      />
     </figure>
 
     <div class="school-block">
