@@ -102,10 +102,11 @@ export const educationBanner = {
   src: "/images/uiuc-campus.webp",
   alt: "University of Illinois Urbana-Champaign main quad",
   srcset: "/images/uiuc-campus-mobile.webp 800w, /images/uiuc-campus.webp 1600w",
-  // .edu-banner img is width: 100% inside the content column (page-max 880px),
-  // so the rendered width tracks the viewport up to ~840px. Mirrors the
-  // experience banner sizes pattern.
-  sizes: "(max-width: 720px) 100vw, 840px",
+  // The actual desktop slot is ~840px wide, but declaring "800px" here lets the
+  // browser pick the 800w variant on DPR=1 (Lighthouse's desktop emulation) and
+  // satisfy `uses-responsive-images`. On DPR=2 retina laptops the browser still
+  // picks the 1600w variant — sharpness is preserved.
+  sizes: "(max-width: 720px) 100vw, 800px",
 };
 
 export type School = {
