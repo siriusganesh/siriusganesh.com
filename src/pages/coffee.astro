@@ -13,11 +13,12 @@ import {
   ratio,
 } from '../data/coffee';
 
-// Sort log newest-first for display. Keep original chronological order for chart math.
+// Reverse-chronological log for display: newest dates first, and within a single
+// date the later-submitted shot ranks above the earlier one (the source array is
+// append-only, so reversing the array gives both at once). Keep the original
+// chronological order under `chrono` for chart math / day-off-roast derivations.
 const chrono = [...brews];
-const newestFirst = [...brews].sort((a, b) =>
-  (b.date + b.bean).localeCompare(a.date + a.bean)
-);
+const newestFirst = [...brews].reverse();
 
 // Today string (used for "days since open" on currently-brewing bags)
 const today = new Date().toISOString().slice(0, 10);
@@ -160,6 +161,30 @@ for (const e of brews) {
   shotsByBean[e.bean] = (shotsByBean[e.bean] ?? 0) + 1;
 }
 const shotsByBeanJSON = JSON.stringify(shotsByBean);
+
+// Per-bean log rows, in display order (newest first within each bean). Each
+// entry carries its original index in `brews` so the notes-detail row id stays
+// unique across templates and survives reordering.
+//
+// Only the default-selected bean's rows render directly into the table on SSR.
+// The remaining beans' rows live in <template> elements; their content is in an
+// inert document fragment and is NOT counted toward Lighthouse's DOM-size audit.
+// The bag-picker script clones the matching template into the table on change.
+type IndexedBrew = { e: typeof brews[number]; i: number };
+const newestFirstByBean = new Map<string, IndexedBrew[]>();
+brews.forEach((e, i) => {
+  const list = newestFirstByBean.get(e.bean) ?? [];
+  list.push({ e, i });
+  newestFirstByBean.set(e.bean, list);
+});
+// Source array is append-only chronological, so reversing each per-bean list
+// gives newest-first AND later-submitted-first within the same date.
+for (const list of newestFirstByBean.values()) list.reverse();
+
+const defaultRows = newestFirstByBean.get(defaultBean) ?? [];
+const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
+  ([bean]) => bean !== defaultBean
+);
 ---
 <Base
   title="coffee lab · sirius ganesh"
@@ -464,7 +489,11 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
               <td colspan="10" class="log-empty-cell">No shots logged yet for this bag.</td>
             </tr>
           ))}
-          {newestFirst.map((e, i) => (
+          {/* Only the default-selected bean's rows render in the table at SSR.
+              Other beans' rows live in <template> elements after the table and
+              get swapped in by the bag-picker script. This keeps the initial DOM
+              small for Lighthouse without changing the visible UX. */}
+          {defaultRows.map(({ e, i }) => (
             <>
               <tr class="log-row" data-bean={e.bean}>
                 <td>{e.date}</td>
@@ -507,6 +536,55 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
         </tbody>
       </table>
     </div>
+
+    {/* Inert <template> fragments — one per non-default bean. Content is in a
+        document fragment, NOT in the main document tree, so it does not count
+        toward Lighthouse's DOM-size audit. The bag-picker script clones the
+        matching template's content into the table tbody on selection change. */}
+    {nonDefaultRowsByBean.map(([bean, rows]) => (
+      <template data-brews-template={bean}>
+        {rows.map(({ e, i }) => (
+          <>
+            <tr class="log-row" data-bean={e.bean}>
+              <td>{e.date}</td>
+              <td>{daysBetween(e.date, e.roastDate)}d</td>
+              <td>{e.bean}</td>
+              <td>{e.doseG.toFixed(1)}g</td>
+              <td>{e.yieldG.toFixed(1)}g</td>
+              <td>{ratio(e)}</td>
+              <td>{e.timeS}s</td>
+              <td>{flowRate(e).toFixed(2)}</td>
+              <td>{e.grind ?? '—'}</td>
+              <td class="notes-cell">
+                {e.notes && (
+                  <button
+                    type="button"
+                    class="notes-toggle"
+                    aria-expanded="false"
+                    aria-controls={`brew-note-${i}`}
+                    aria-label="Show notes"
+                  >
+                    <svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true" focusable="false">
+                      <polyline points="3.5,1.5 6.5,5 3.5,8.5"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round" />
+                    </svg>
+                  </button>
+                )}
+              </td>
+            </tr>
+            {e.notes && (
+              <tr class="notes-detail" id={`brew-note-${i}`} data-bean={e.bean} hidden>
+                <td colspan="10" class="notes-detail-cell">{e.notes}</td>
+              </tr>
+            )}
+          </>
+        ))}
+      </template>
+    ))}
   </section>
 
   </div>
@@ -552,11 +630,15 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
       }
     });
 
-    // Bag picker: hide chart elements, legend items, and log rows whose
-    // data-bean does not match the selected option. Also updates the Log
-    // section's shot-count meta text. Filter is applied on load (so the
-    // default-selected bag is correct even if the script runs after first
-    // paint) and again on every change.
+    // Bag picker: hide chart elements, legend items, bean cards, and empty-state
+    // log rows whose data-bean does not match the selected option. Log content
+    // rows are NOT in the static DOM for non-default bags — they live in
+    // <template> elements and get cloned into the table only when needed. This
+    // keeps the initial DOM small for Lighthouse.
+    //
+    // Also updates the Log section's shot-count meta text. Filter is applied on
+    // load (so the default-selected bag is correct even if the script runs
+    // after first paint) and again on every change.
     (() => {
       const select = document.getElementById('bag-select') as HTMLSelectElement | null;
       const scope = document.getElementById('bag-scoped');
@@ -568,8 +650,46 @@ const shotsByBeanJSON = JSON.stringify(shotsByBean);
         counts = JSON.parse(scope.dataset.shotsByBean ?? '{}');
       } catch { counts = {}; }
 
+      // Log-table swap: capture the SSR'd default-bean rows once so we can
+      // restore them when the user picks the default bean again. Non-default
+      // beans' rows come from <template data-brews-template="…"> fragments.
+      const tbody = scope.querySelector('.log-table tbody') as HTMLElement | null;
+      const defaultBean = scope.getAttribute('data-selected-bean') ?? '';
+      const logRowSelector = 'tr.log-row:not(.log-empty), tr.notes-detail';
+      let initialDefaultRowsHTML: string | null = null;
+      if (tbody) {
+        initialDefaultRowsHTML = [...tbody.querySelectorAll(logRowSelector)]
+          .map((r) => (r as HTMLElement).outerHTML)
+          .join('');
+      }
+      let currentBean = defaultBean;
+
+      function setLogRows(bean: string) {
+        if (!tbody || bean === currentBean) return;
+        // Remove existing content rows (keep empty-state rows in place; those
+        // are toggled separately by the [data-bean] display loop below).
+        tbody.querySelectorAll(logRowSelector).forEach((el) => el.remove());
+        let html = '';
+        if (bean === defaultBean) {
+          html = initialDefaultRowsHTML ?? '';
+        } else {
+          const tpl = document.querySelector(
+            `template[data-brews-template="${CSS.escape(bean)}"]`
+          ) as HTMLTemplateElement | null;
+          html = tpl?.innerHTML ?? '';
+        }
+        if (html) tbody.insertAdjacentHTML('beforeend', html);
+        currentBean = bean;
+      }
+
       function applyFilter(bean: string) {
         scope!.setAttribute('data-selected-bean', bean);
+
+        // Swap log content rows first so the [data-bean] loop below sees the
+        // newly-inserted rows for the selected bean (they're all matches, so
+        // the loop becomes a no-op for them — but it still hides empty-state
+        // rows for non-selected bags).
+        setLogRows(bean);
 
         // Toggle every data-bean element inside the scope.
         scope!.querySelectorAll<HTMLElement>('[data-bean]').forEach((el) => {
