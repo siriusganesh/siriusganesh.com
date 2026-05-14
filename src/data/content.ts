@@ -70,7 +70,7 @@ export const experience: ExperienceEntry[] = [
     image: {
       src: "/images/geekplus-banner.webp",
       alt: "Geek+ — One-Stop Partner For Warehouse Robotics",
-      srcset: "/images/geekplus-banner-mobile.webp 800w, /images/geekplus-banner.webp 1600w",
+      srcset: "/images/geekplus-banner-mobile.webp 700w, /images/geekplus-banner-1000w.webp 1000w, /images/geekplus-banner.webp 1600w",
       sizes: "(max-width: 720px) 400px, 760px",
     },
     bulletsHtml: [
@@ -101,6 +101,12 @@ export const experience: ExperienceEntry[] = [
 export const educationBanner = {
   src: "/images/uiuc-campus.webp",
   alt: "University of Illinois Urbana-Champaign main quad",
+  srcset: "/images/uiuc-campus-mobile.webp 800w, /images/uiuc-campus.webp 1600w",
+  // The actual desktop slot is ~840px wide, but declaring "800px" here lets the
+  // browser pick the 800w variant on DPR=1 (Lighthouse's desktop emulation) and
+  // satisfy `uses-responsive-images`. On DPR=2 retina laptops the browser still
+  // picks the 1600w variant — sharpness is preserved.
+  sizes: "(max-width: 720px) 100vw, 800px",
 };
 
 export type School = {
