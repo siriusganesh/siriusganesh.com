@@ -28,25 +28,32 @@ const today = new Date().toISOString().slice(0, 10);
 //   x = days off roast at time of brew
 //   y = flow rate (g/s) = yieldG / timeS
 //
-// Primary series: per-day MEAN flow rate per bean. Line connects these.
-// Ghost series: individual shots (hollow dots) shown behind the mean points
-//               so daily variation is visible without cluttering the line.
+// Three layers, back to front:
+//   1. Individual shots — clean shots as hollow dashed rings; tainted shots
+//      (entry.flag set) as small × markers in the bean's color. Both show
+//      within-day variation; the × also signals "excluded from the math".
+//   2. Per-day mean of *clean* shots (solid dot). Tainted shots are not
+//      counted in this mean; days that are entirely tainted have no dot.
+//   3. Log-fit degradation line per bean (y = a + b·ln(x+1)), fit by closed-
+//      form OLS on the clean shots only. Skipped for beans with <3 clean
+//      shots or <3 distinct clean days off roast.
 
 type Point = {
   x: number;        // days off roast
   y: number;        // flow rate g/s
   grind: string;
   entry: typeof chrono[number];
+  tainted: boolean; // entry.flag set → excluded from daily mean + regression
 };
 
 type DayPoint = {
   x: number;        // days off roast (shared across shots on that day)
-  y: number;        // mean flow rate for that day
-  count: number;    // number of shots averaged
+  y: number;        // mean flow rate for that day (clean shots only)
+  count: number;    // number of clean shots averaged
   date: string;
 };
 
-// Group individual shots by bean (used as ghost dots)
+// Group individual shots by bean (used for all markers — clean and tainted).
 const rawByBean = new Map<string, Point[]>();
 for (const e of chrono) {
   const p: Point = {
@@ -54,17 +61,21 @@ for (const e of chrono) {
     y: flowRate(e),
     grind: e.grind ?? '',
     entry: e,
+    tainted: !!e.flag,
   };
   const list = rawByBean.get(e.bean) ?? [];
   list.push(p);
   rawByBean.set(e.bean, list);
 }
 
-// Collapse to one point per (bean, date) using mean flow rate (used as line + solid dots)
+// Collapse to one point per (bean, date) using mean flow rate of CLEAN shots
+// only. Days that have only tainted shots produce no DayPoint — those shots
+// still render as × markers but don't contribute a daily mean dot.
 const avgByBean = new Map<string, DayPoint[]>();
 for (const [bean, shots] of rawByBean.entries()) {
   const byDate = new Map<string, Point[]>();
   for (const p of shots) {
+    if (p.tainted) continue;
     const key = p.entry.date;
     const list = byDate.get(key) ?? [];
     list.push(p);
@@ -77,6 +88,35 @@ for (const [bean, shots] of rawByBean.entries()) {
   }
   days.sort((a, b) => a.x - b.x);
   avgByBean.set(bean, days);
+}
+
+// Per-bean degradation fit: y = a + b·ln(x + 1), via closed-form OLS on the
+// transformed regressor u = ln(x + 1). Right shape for the 5–30-day window
+// where outgassing is still rising (fast early, slowing toward a plateau)
+// without a 3-parameter nonlinear fit. Computed from clean shots only.
+// Beans with <3 clean shots or <3 distinct clean days off roast get no fit
+// (their dots still render — the chart just doesn't draw a curve through too
+// little data).
+type Fit = { a: number; b: number };
+const fitByBean = new Map<string, Fit>();
+for (const [bean, shots] of rawByBean.entries()) {
+  const clean = shots.filter((p) => !p.tainted);
+  const distinctDays = new Set(clean.map((p) => p.x));
+  if (clean.length < 3 || distinctDays.size < 3) continue;
+  const n = clean.length;
+  let sU = 0, sY = 0, sUU = 0, sUY = 0;
+  for (const p of clean) {
+    const u = Math.log(p.x + 1);
+    sU += u;
+    sY += p.y;
+    sUU += u * u;
+    sUY += u * p.y;
+  }
+  const denom = n * sUU - sU * sU;
+  if (Math.abs(denom) < 1e-12) continue;  // x's collapsed; no fit
+  const b = (n * sUY - sU * sY) / denom;
+  const a = (sY - b * sU) / n;
+  fitByBean.set(bean, { a, b });
 }
 
 // Chart geometry
@@ -133,6 +173,30 @@ const bagColorByBean = new Map(bags.map((b) => [b.bean, b.chartColor]));
 [...rawByBean.keys()].forEach((b, i) => {
   beanColor.set(b, bagColorByBean.get(b) ?? palette[i % palette.length]);
 });
+
+// Pre-compute the fit polyline "points" string per fitted bean: sample the
+// fitted curve at FIT_SAMPLES+1 evenly spaced x values across the bean's
+// observed clean-shot x range (clamped to the chart x domain), evaluate the
+// model, and project through sx/sy. Drawn as a single <polyline> per bean —
+// keeps DOM cost flat (one element per bean's fit, not 40).
+const FIT_SAMPLES = 40;
+const fitPathByBean = new Map<string, string>();
+for (const [bean, fit] of fitByBean.entries()) {
+  const cleanXs = (rawByBean.get(bean) ?? [])
+    .filter((p) => !p.tainted)
+    .map((p) => p.x);
+  if (cleanXs.length === 0) continue;
+  const xLo = Math.max(xMin, Math.min(...cleanXs));
+  const xHi = Math.min(xMax, Math.max(...cleanXs));
+  if (xHi <= xLo) continue;
+  const pts: string[] = [];
+  for (let i = 0; i <= FIT_SAMPLES; i++) {
+    const xi = xLo + ((xHi - xLo) * i) / FIT_SAMPLES;
+    const yi = fit.a + fit.b * Math.log(xi + 1);
+    pts.push(`${sx(xi).toFixed(1)},${sy(yi).toFixed(1)}`);
+  }
+  fitPathByBean.set(bean, pts.join(' '));
+}
 
 // ---------- BAG PICKER ----------
 // Build the dropdown's options in three optgroups, in this order:
@@ -390,36 +454,63 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
         <line x1={M.left} y1={M.top + innerH} x2={M.left + innerW} y2={M.top + innerH} stroke="#91928f" stroke-width="1" />
         <line x1={M.left} y1={M.top} x2={M.left} y2={M.top + innerH} stroke="#91928f" stroke-width="1" />
 
-        {/* Ghost dots: individual shots, rendered behind so they show variation */}
+        {/* Individual shots, back layer. Clean shots → hollow dashed ring.
+            Tainted shots → small × marker in the bean's color (still on the
+            chart, but the title says why it's excluded). */}
         {[...rawByBean.entries()].map(([bean, points]) => {
           const color = beanColor.get(bean) ?? '#011f5b';
           return (
             <g data-bean={bean}>
-              {points.map((p) => (
-                <circle
-                  cx={sx(p.x)} cy={sy(p.y)} r="3"
-                  fill="none"
-                  stroke={color}
-                  stroke-width="1"
-                  stroke-opacity="0.55"
-                  stroke-dasharray="2 1.5"
-                >
-                  <title>{`${p.entry.date} · ${bean} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind} (raw shot)`}</title>
-                </circle>
-              ))}
+              {points.map((p) => {
+                const cx = sx(p.x);
+                const cy = sy(p.y);
+                if (p.tainted) {
+                  const r = 3.5;
+                  const d =
+                    `M${(cx - r).toFixed(1)},${(cy - r).toFixed(1)} ` +
+                    `L${(cx + r).toFixed(1)},${(cy + r).toFixed(1)} ` +
+                    `M${(cx - r).toFixed(1)},${(cy + r).toFixed(1)} ` +
+                    `L${(cx + r).toFixed(1)},${(cy - r).toFixed(1)}`;
+                  return (
+                    <path
+                      d={d}
+                      fill="none"
+                      stroke={color}
+                      stroke-width="1.1"
+                      stroke-opacity="0.7"
+                      stroke-linecap="round"
+                    >
+                      <title>{`${p.entry.date} · ${bean} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind} (excluded: ${p.entry.flag})`}</title>
+                    </path>
+                  );
+                }
+                return (
+                  <circle
+                    cx={cx} cy={cy} r="3"
+                    fill="none"
+                    stroke={color}
+                    stroke-width="1"
+                    stroke-opacity="0.55"
+                    stroke-dasharray="2 1.5"
+                  >
+                    <title>{`${p.entry.date} · ${bean} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind} (raw shot)`}</title>
+                  </circle>
+                );
+              })}
             </g>
           );
         })}
 
-        {/* Primary series: per-day mean flow rate — line + solid dots */}
+        {/* Primary series: log-fit degradation curve + per-day mean dots
+            (clean shots only). Fit is computed in the frontmatter. */}
         {[...avgByBean.entries()].map(([bean, days]) => {
           const color = beanColor.get(bean) ?? '#011f5b';
-          const path = days.map((d) => `${sx(d.x).toFixed(1)},${sy(d.y).toFixed(1)}`).join(' ');
+          const fitPath = fitPathByBean.get(bean);
           return (
             <g data-bean={bean}>
-              {days.length > 1 && (
+              {fitPath && (
                 <polyline
-                  points={path}
+                  points={fitPath}
                   fill="none"
                   stroke={color}
                   stroke-width="1.5"
@@ -428,7 +519,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
               )}
               {days.map((d) => (
                 <circle cx={sx(d.x)} cy={sy(d.y)} r="4" fill={color}>
-                  <title>{`${d.date} · ${bean} · ${d.x}d off · ${d.y.toFixed(2)} g/s (mean of ${d.count} shot${d.count === 1 ? '' : 's'})`}</title>
+                  <title>{`${d.date} · ${bean} · ${d.x}d off · ${d.y.toFixed(2)} g/s (mean of ${d.count} clean shot${d.count === 1 ? '' : 's'})`}</title>
                 </circle>
               ))}
             </g>
@@ -446,16 +537,22 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
         <span class="legend-item legend-note">
           <span class="legend-dot legend-dot-solid"></span>daily mean
           <span class="legend-dot legend-dot-ghost"></span>individual shot
+          <span class="legend-x" aria-hidden="true">×</span>excluded
         </span>
       </figcaption>
     </figure>
 
     <p class="chart-note">
       Higher flow = less puck resistance. Rising trend at the same grind
-      suggests beans losing CO<sub>2</sub>. Solid dots are per-day averages
-      (connected by line); hollow dashed rings are individual shots, shown to
-      expose within-day variation. Shaded band is the rough espresso peak
-      window (7 – 21 days off roast).
+      suggests beans losing CO<sub>2</sub>. The curve through each bean is a
+      logarithmic fit (y = a + b·ln(x + 1)) on clean shots only; it captures
+      the fast-early, slowing degradation shape without overfitting the
+      handful of data points per bag. Solid dots are per-day averages of
+      clean shots, hollow dashed rings are individual clean shots, and
+      <span aria-hidden="true">×</span> marks shots excluded from the math
+      (dial-in sweeps, prep mistakes, or process errors — hover for the
+      reason). Shaded band is the rough espresso peak window
+      (7 – 21 days off roast).
     </p>
   </section>
 

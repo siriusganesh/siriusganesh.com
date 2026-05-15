@@ -19,6 +19,18 @@ export type BrewEntry = {
   method?: Method;     // defaults to 'espresso'
   rating?: 1 | 2 | 3 | 4 | 5;
   notes?: string;
+
+  // Excludes the shot from the chart's regression / daily-mean math. Absent
+  // means clean. Choose by *originating cause*, not by how the shot tasted:
+  //   dial-in        — intentional grind / temp sweep before locking a setting
+  //   process-error  — equipment step skipped or failed (no puck screen, scale
+  //                    died mid-pour, machine cycled mid-shot, etc.)
+  //   prep-error     — puck prep or handling mistake (channeling, fines,
+  //                    spilled grounds and re-ground, lost bean, etc.)
+  // Tainted shots still render on the chart as small × markers in the bean's
+  // color and still appear in the log table — the chart just doesn't count
+  // them toward the daily mean or the degradation fit.
+  flag?: 'dial-in' | 'process-error' | 'prep-error';
 };
 
 // TODO: introduce a stable `bagId` (default: slug(bean) + '-' + roastDate) and
@@ -318,6 +330,7 @@ export const brews: BrewEntry[] = [
     puckScreen: true,
     method: 'espresso',
     notes: 'Scale battery died right after pour; yield was 36.x — saw 36.5 but the decimal is uncertain.',
+    flag: 'prep-error',
   },
   {
     date: '2026-04-26',
@@ -333,6 +346,7 @@ export const brews: BrewEntry[] = [
     puckScreen: true,
     method: 'espresso',
     notes: 'Lost a bean before grinding; effective dose slightly under 15.5 g.',
+    flag: 'prep-error',
   },
   {
     date: '2026-04-26',
@@ -362,6 +376,7 @@ export const brews: BrewEntry[] = [
     puckScreen: true,
     method: 'espresso',
     notes: 'Spilled grounds and re-ground; longer gap between shots may have produced a temp spike (MaraX is HX, not dual boiler).',
+    flag: 'prep-error',
   },
   {
     date: '2026-04-27',
@@ -447,6 +462,7 @@ export const brews: BrewEntry[] = [
     puckScreen: true,
     method: 'espresso',
     notes: 'Sour, underextracted, some nuance. Will grind #5 next time.',
+    flag: 'dial-in',
   },
   {
     date: '2026-04-29',
@@ -605,6 +621,7 @@ export const brews: BrewEntry[] = [
     puckScreen: false,
     method: 'espresso',
     notes: 'Forgot puck screen.',
+    flag: 'process-error',
   },
   {
     date: '2026-05-05',
@@ -746,6 +763,7 @@ export const brews: BrewEntry[] = [
     puckScreen: true,
     method: 'espresso',
     notes: 'Old bag settings — #5 too fine, High too hot for this medium-dark blend.',
+    flag: 'dial-in',
   },
   {
     date: '2026-05-13',
@@ -761,6 +779,7 @@ export const brews: BrewEntry[] = [
     puckScreen: true,
     method: 'espresso',
     notes: 'Coarser to #7, dropped temp to Mid.',
+    flag: 'dial-in',
   },
   {
     date: '2026-05-13',

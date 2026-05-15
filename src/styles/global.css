@@ -1046,6 +1046,15 @@ footer.page-footer {
   border: 1px dashed var(--text-dim);
   margin-left: 0.5rem;
 }
+.legend-note .legend-x {
+  display: inline-block;
+  width: 0.55rem;
+  text-align: center;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-left: 0.5rem;
+  line-height: 1;
+}
 
 .chart-note {
   margin-top: 0.9rem;
