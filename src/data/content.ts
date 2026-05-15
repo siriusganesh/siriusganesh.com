@@ -51,7 +51,7 @@ export const experience: ExperienceEntry[] = [
     image: {
       src: "/images/pickle-banner.webp",
       alt: "Pickle Robot — Physical AI for Supply Chain Automation (gripper)",
-      srcset: "/images/pickle-banner-mobile.webp 800w, /images/pickle-banner.webp 1584w",
+      srcset: "/images/pickle-banner-mobile.webp 700w, /images/pickle-banner-1000w.webp 1000w, /images/pickle-banner.webp 1584w",
       sizes: "(max-width: 720px) 400px, 760px",
     },
     bulletsHtml: [
@@ -70,7 +70,7 @@ export const experience: ExperienceEntry[] = [
     image: {
       src: "/images/geekplus-banner.webp",
       alt: "Geek+ — One-Stop Partner For Warehouse Robotics",
-      srcset: "/images/geekplus-banner-mobile.webp 700w, /images/geekplus-banner-1000w.webp 1000w, /images/geekplus-banner.webp 1600w",
+      srcset: "/images/geekplus-banner-mobile.webp 700w, /images/geekplus-banner-1000w.webp 1000w, /images/geekplus-banner.webp 1584w",
       sizes: "(max-width: 720px) 400px, 760px",
     },
     bulletsHtml: [
@@ -100,13 +100,12 @@ export const experience: ExperienceEntry[] = [
 
 export const educationBanner = {
   src: "/images/uiuc-campus.webp",
-  alt: "University of Illinois Urbana-Champaign main quad",
-  srcset: "/images/uiuc-campus-mobile.webp 800w, /images/uiuc-campus.webp 1600w",
-  // The actual desktop slot is ~840px wide, but declaring "800px" here lets the
-  // browser pick the 800w variant on DPR=1 (Lighthouse's desktop emulation) and
-  // satisfy `uses-responsive-images`. On DPR=2 retina laptops the browser still
-  // picks the 1600w variant — sharpness is preserved.
-  sizes: "(max-width: 720px) 100vw, 800px",
+  alt: "University of Illinois — Foellinger Auditorium on the main quad",
+  srcset: "/images/uiuc-campus-mobile.webp 700w, /images/uiuc-campus-1000w.webp 1000w, /images/uiuc-campus.webp 1584w",
+  // sizes mirrors the experience banner pattern — banner spans the content
+  // column up to ~760px on desktop. Browser at DPR=1 picks the 1000w variant;
+  // DPR=2 retina picks the 1584w. Mobile picks 700w.
+  sizes: "(max-width: 720px) 100vw, 760px",
 };
 
 export type School = {
