@@ -460,7 +460,7 @@ section.block > header .meta {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 3.7 / 1;
+  aspect-ratio: 4 / 1;
   object-fit: cover;
 }
 
@@ -847,9 +847,10 @@ footer.page-footer {
   /* Tap target: make meta-row pins easier to hit */
   .meta-row { gap: 0.65rem 1rem; }
 
-  /* Experience / edu banners: cap display height so they don't dominate */
-  .experience-item .experience-image img { aspect-ratio: 3 / 1; }
-  .edu-banner img { aspect-ratio: 3 / 1; }
+  /* Experience / edu banners: match image AR (4:1) so sides aren't cropped
+     by object-fit cover on narrow viewports. */
+  .experience-item .experience-image img { aspect-ratio: 4 / 1; }
+  .edu-banner img { aspect-ratio: 4 / 1; }
 
   /* About gallery tiles: scale text tile font */
   .tile-headline { font-size: 0.9rem; }
