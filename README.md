@@ -1,73 +1,35 @@
 # siriusganesh.com
 
-Personal portfolio for **Sirius Ganesh** — deployment engineering leader scaling
-warehouse robotics from startup pilot to enterprise production. Pickle Robot · Geek+ ·
-AMR fleets · systems integration.
+Personal portfolio for warehouse-robotics deployment — startup pilot
+through enterprise production.
 
-**Live:** [siriusganesh.com](https://siriusganesh.com)
+Source is public because the build is reproducible and the source itself
+is part of what's being shown.
 
-Built with Astro as a static site — no runtime JS, self-hosted fonts, deployed on
-Cloudflare Pages. Source is public so the build is reproducible and to make small
-updates (resume, new project, typo) frictionless.
+[Live site →](https://siriusganesh.com)
 
----
+## Deliberate choices
 
-## Stack
+- No client-side JS by default. One small script powers the bag picker on
+  `/coffee/`; everything else is server-rendered at build.
+- Lighthouse CI on every PR (mobile + desktop matrix). Budget enforced;
+  scores attached to every merge.
+- Hand-rolled SVG charting on `/coffee/`. Log-fit regression math runs at
+  build time in the page frontmatter, not in the browser.
+- Image pipeline: HEIC source → responsive WebP variants, srcset + `sizes`
+  tuned per slot, hero preloaded via imagesrcset.
+- DOM-size discipline: `/coffee/` keeps inactive bag log rows in
+  `<template>` fragments so element count stays flat as the log grows.
 
-- [Astro](https://astro.build/) — static site generator
-- IBM Plex Mono + system Verdana stack — fonts
-- Cloudflare Pages — hosting, CDN, TLS
-- Cloudflare DNS — domain
+## Local
 
-## Local development
+Astro static site, deployed on Cloudflare Pages.
 
 ```bash
 npm install
 npm run dev       # http://localhost:4321
 npm run build     # output in dist/
-npm run preview   # serve dist/ locally
 ```
 
-## Editing content
-
-Almost everything you'll change day-to-day lives in **`src/data/content.ts`**.
-Experience, capabilities, projects, about, contact — all plain data.
-
-- **New project:** add an object to the `projects` array.
-- **New job or promotion:** add/edit an entry in the `experience` array.
-- **Copy tweak:** change the relevant `*Html` field.
-- **Resume:** drop the new PDF at `public/Resume_SG.pdf` (same filename).
-
-Visuals and layout live in:
-- `src/styles/global.css` — all styles, CSS variables at top
-- `src/layouts/Base.astro` — nav, footer, meta tags
-- `src/pages/index.astro` — the page structure (mostly loops over `content.ts`)
-
-## Deploying
-
-The site is wired to Cloudflare Pages via GitHub. Every push to `main` triggers a
-production build. Pushes to any other branch get a unique preview URL.
-
-Update flow:
-
-```bash
-git checkout -b update-projects
-# edit src/data/content.ts
-git add -A
-git commit -m "Add case study: site-07"
-git push -u origin update-projects
-# → Cloudflare Pages gives you a preview URL in the PR
-# merge the PR → production deploys automatically
-```
-
-For tiny updates (resume swap, typo fix) you can just push straight to `main`.
-
-## Cloudflare Pages config
-
-- Framework preset: **Astro**
-- Build command: `npm run build`
-- Build output directory: `dist`
-- Node version: `22` (set in Pages → Settings → Environment variables:
-  `NODE_VERSION=22`) — Astro 6 requires Node >= 22.12
-
-See `DEPLOYMENT.md` for the one-time setup walkthrough.
+Content in `src/data/*.ts`. Styles in `src/styles/global.css`.
+Cloudflare setup in `DEPLOYMENT.md`.
