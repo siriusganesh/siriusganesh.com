@@ -64,6 +64,8 @@ const isCoffee = currentPath === '/coffee';
                     href="/coffee"
                     class:list={[isCoffee && 'is-current']}
                     aria-current={isCoffee ? 'page' : undefined}
+                    aria-disabled={isCoffee ? 'true' : undefined}
+                    tabindex={isCoffee ? -1 : undefined}
                   >coffee</a>
                 </li>
                 <li>
