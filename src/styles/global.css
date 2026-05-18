@@ -295,6 +295,12 @@ nav.topnav .dropdown-menu a.is-current:hover {
   border-color: transparent;
   pointer-events: none;
   cursor: default;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+/* Keep the ↗ arrow un-struck if a current item ever has one. */
+nav.topnav .dropdown-menu a.is-current .ext-arrow {
+  text-decoration: none;
 }
 
 /* External-target arrow inside the projects dropdown. Press cards already
