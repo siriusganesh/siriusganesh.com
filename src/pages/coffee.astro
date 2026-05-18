@@ -200,9 +200,10 @@ for (const [bean, fit] of fitByBean.entries()) {
 
 // ---------- BAG PICKER ----------
 // Build the dropdown's options in three optgroups, in this order:
-//   1. Open         (default-selected)
-//   2. Coming soon  (bought, not yet opened)
+//   1. Coming soon  (bought, not yet opened)
+//   2. Open         (default-selected)
 //   3. Past         (finished)
+// Visual order ≠ default selection — defaultBean still resolves to the open bag.
 // The dropdown label uses `bean · roastDate` rather than `bean · roaster` so
 // repeat purchases of the same bean (different roast date) stay distinct in
 // the picker.
@@ -276,18 +277,18 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
       id="bag-select"
       aria-controls="bag-scoped"
     >
-      {openBags.length > 0 && (
-        <optgroup label="Open">
-          {openBags.map((b) => (
+      {comingSoonBags.length > 0 && (
+        <optgroup label="Coming soon">
+          {comingSoonBags.map((b) => (
             <option value={b.bean} selected={b.bean === defaultBean}>
               {b.bean} · {b.roastDate}
             </option>
           ))}
         </optgroup>
       )}
-      {comingSoonBags.length > 0 && (
-        <optgroup label="Coming soon">
-          {comingSoonBags.map((b) => (
+      {openBags.length > 0 && (
+        <optgroup label="Open">
+          {openBags.map((b) => (
             <option value={b.bean} selected={b.bean === defaultBean}>
               {b.bean} · {b.roastDate}
             </option>
