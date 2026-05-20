@@ -369,7 +369,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
     </header>
 
     <figure class="chart">
-      <svg viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow rate vs days off roast">
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow rate vs days off roast">
         {/* peak-window shaded band */}
         <rect
           x={peakX1}
