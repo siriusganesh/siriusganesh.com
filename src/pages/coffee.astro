@@ -312,7 +312,14 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
   <section class="block" id="bag-info">
     <div class="bean-grid">
       {bags.map((b) => (
-        <div class="bean-card" data-bean={b.bean}>
+        // SSR-hide non-default bean cards so first paint matches the post-script
+        // state. Otherwise the grid lays out as 3+1 on desktop, then the picker
+        // script hides 3 cards and the remaining card snaps from row1-col3 to
+        // row1-col1 (and the chart below slides up) — a single LayoutShift that
+        // scored ~0.091 on desktop run 1. JS toggle uses style.display, so
+        // matching that here (inline style) lets removeProperty/'display'='none'
+        // continue to work on dropdown change.
+        <div class="bean-card" data-bean={b.bean} style={b.bean === defaultBean ? undefined : 'display:none'}>
           <div class="bean-name">{b.bean}</div>
           {b.roaster && <div class="bean-roaster">{b.roaster}</div>}
           {(() => {
