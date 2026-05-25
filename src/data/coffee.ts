@@ -1177,6 +1177,7 @@ export const brews: BrewEntry[] = [
     puckScreen: true,
     method: 'espresso',
     notes: 'Some evidence of channeling; cause unclear.',
+    flag: 'prep-error',
   },
 ];
 
