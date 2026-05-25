@@ -6,7 +6,7 @@
         "http://localhost/",
         "http://localhost/coffee/"
       ],
-      "numberOfRuns": 3,
+      "numberOfRuns": 4,
       "settings": {
         "formFactor": "mobile",
         "screenEmulation": {
