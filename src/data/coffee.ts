@@ -33,10 +33,6 @@ export type BrewEntry = {
   flag?: 'dial-in' | 'process-error' | 'prep-error';
 };
 
-// TODO: introduce a stable `bagId` (default: slug(bean) + '-' + roastDate) and
-// switch chart data attrs, log row data attrs, dropdown values, and the
-// shot-count map off of `bean` and onto `bagId`. Without this, buying a second
-// bag of the same bean (different roast date) will conflate them in the UI.
 export type Bag = {
   bean: string;                 // display name. Country-only for single origins
                                 // ("Guatemala", "Ethiopia"), distinctive name for
@@ -83,6 +79,25 @@ export type Bag = {
   // falls back to the cycled palette if omitted.
   chartColor?: string;
 };
+
+/**
+ * Stable per-bag identifier built from bean + roast date. Used as the
+ * filter key for the dropdown, chart series, log rows, and bean cards so
+ * two bags that share a bean name (e.g. a repurchased Mokha Java with a
+ * later roast date) don't conflate in the UI. Display still shows
+ * `bean · roastDate` — bagId is the internal join key only.
+ *
+ * Format: `slug(bean)-YYYY-MM-DD`. Lowercase, spaces → hyphens, non-alnum
+ * stripped. Both `Bag` and `BrewEntry` carry bean + roastDate, so this
+ * helper accepts either.
+ */
+export function bagIdOf(b: { bean: string; roastDate: string }): string {
+  const slug = b.bean
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+  return `${slug}-${b.roastDate}`;
+}
 
 /** Build the badge row in canonical order. Empty fields are skipped. */
 export function bagBadges(b: Bag): string[] {
@@ -163,6 +178,34 @@ export const bags: Bag[] = [
     varieties: ['Ethiopian Heirloom'],
     harvest: 'November–April',
     chartColor: '#b07a1c',
+  },
+  {
+    // Coming soon: repurchase of the same El Progreso lot, newer roast.
+    bean: 'Guatemala',
+    roaster: 'La Cosecha',
+    roastDate: '2026-05-26',
+    type: 'single origin',
+    process: 'washed',
+    roastLevel: 'light',
+    origin: 'El Progreso, Guatemala',
+    tastingNotes: ['vanilla', 'peach', 'tangerine'],
+    producer: 'Las Moritas',
+    elevation: '1,700–1,800 MASL',
+    varieties: ['Bourbon', 'Castillo', 'Pacamara', 'Pache'],
+    harvest: 'April–May',
+    chartColor: '#1f7a3a',
+  },
+  {
+    // Coming soon: repurchase of the same Mokha Java blend, newer roast.
+    bean: 'Mokha Java',
+    roaster: 'La Cosecha',
+    roastDate: '2026-05-26',
+    specialRelease: true,
+    type: 'blend',
+    roastLevel: 'medium',
+    origin: 'Papua New Guinea + Ethiopia',
+    tastingNotes: ['fig', 'dried raspberry', 'dark chocolate'],
+    chartColor: '#3a73a8',
   },
 ];
 

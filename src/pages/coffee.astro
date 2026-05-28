@@ -8,6 +8,7 @@ import {
   comingSoonBeans,
   rig,
   bagBadges,
+  bagIdOf,
   daysBetween,
   flowRate,
   ratio,
@@ -53,9 +54,15 @@ type DayPoint = {
   date: string;
 };
 
-// Group individual shots by bean (used for all markers — clean and tainted).
-const rawByBean = new Map<string, Point[]>();
+// Lookup by bagId for legends, titles, and color resolution.
+const bagsByBagId = new Map(bags.map((b) => [bagIdOf(b), b]));
+
+// Group individual shots by bagId (was: by bean). Keying off bagId lets two
+// bags that share a bean name (e.g. a repurchased Mokha Java with a newer
+// roast date) render as separate series instead of conflating.
+const rawByBagId = new Map<string, Point[]>();
 for (const e of chrono) {
+  const id = bagIdOf(e);
   const p: Point = {
     x: daysBetween(e.date, e.roastDate),
     y: flowRate(e),
@@ -63,16 +70,16 @@ for (const e of chrono) {
     entry: e,
     tainted: !!e.flag,
   };
-  const list = rawByBean.get(e.bean) ?? [];
+  const list = rawByBagId.get(id) ?? [];
   list.push(p);
-  rawByBean.set(e.bean, list);
+  rawByBagId.set(id, list);
 }
 
-// Collapse to one point per (bean, date) using mean flow rate of CLEAN shots
+// Collapse to one point per (bagId, date) using mean flow rate of CLEAN shots
 // only. Days that have only tainted shots produce no DayPoint — those shots
 // still render as × markers but don't contribute a daily mean dot.
-const avgByBean = new Map<string, DayPoint[]>();
-for (const [bean, shots] of rawByBean.entries()) {
+const avgByBagId = new Map<string, DayPoint[]>();
+for (const [id, shots] of rawByBagId.entries()) {
   const byDate = new Map<string, Point[]>();
   for (const p of shots) {
     if (p.tainted) continue;
@@ -87,7 +94,7 @@ for (const [bean, shots] of rawByBean.entries()) {
     days.push({ x: dayShots[0].x, y: meanY, count: dayShots.length, date });
   }
   days.sort((a, b) => a.x - b.x);
-  avgByBean.set(bean, days);
+  avgByBagId.set(id, days);
 }
 
 // Per-bean degradation fit: y = a + b·ln(x + 1), via closed-form OLS on the
@@ -98,8 +105,8 @@ for (const [bean, shots] of rawByBean.entries()) {
 // (their dots still render — the chart just doesn't draw a curve through too
 // little data).
 type Fit = { a: number; b: number };
-const fitByBean = new Map<string, Fit>();
-for (const [bean, shots] of rawByBean.entries()) {
+const fitByBagId = new Map<string, Fit>();
+for (const [id, shots] of rawByBagId.entries()) {
   const clean = shots.filter((p) => !p.tainted);
   const distinctDays = new Set(clean.map((p) => p.x));
   if (clean.length < 3 || distinctDays.size < 3) continue;
@@ -116,7 +123,7 @@ for (const [bean, shots] of rawByBean.entries()) {
   if (Math.abs(denom) < 1e-12) continue;  // x's collapsed; no fit
   const b = (n * sUY - sU * sY) / denom;
   const a = (sY - b * sU) / n;
-  fitByBean.set(bean, { a, b });
+  fitByBagId.set(id, { a, b });
 }
 
 // Chart geometry
@@ -129,8 +136,8 @@ const innerH = H - M.top - M.bottom;
 // Axis domains. Pad so points don't sit on the edges.
 // Domain uses raw shots so ghost dots at the extremes still fit on the canvas.
 // x: 0 -> max days off roast observed, rounded up to next 5, min 30
-const allX = [...rawByBean.values()].flat().map((p) => p.x);
-const allY = [...rawByBean.values()].flat().map((p) => p.y);
+const allX = [...rawByBagId.values()].flat().map((p) => p.x);
+const allY = [...rawByBagId.values()].flat().map((p) => p.y);
 const xMaxData = allX.length ? Math.max(...allX) : 30;
 const xMax = Math.max(30, Math.ceil(xMaxData / 5) * 5);
 const xMin = 0;
@@ -162,16 +169,16 @@ for (let t = Math.ceil(yMin / 0.25) * 0.25; t <= yMax + 1e-9; t += 0.25) {
   yTicks.push(Number(t.toFixed(2)));
 }
 
-// Per-bean chart color. Prefer the bag's explicit `chartColor` (chosen to
-// match the bag's packaging) so each bean reads the same on the chart, on the
-// legend, and on the dot in the bean card. Fall back to a cycled palette if a
-// bag hasn't set one yet, or if a bean appears in the brew log without a
-// matching Bag entry.
+// Per-bag chart color. Prefer the bag's explicit `chartColor` (chosen to
+// match the bag's packaging) so each bag reads the same on the chart, on the
+// legend, and on the dot in the bean card. Fall back to a cycled palette if
+// a bag hasn't set one yet, or if a brew references a bagId without a
+// matching Bag entry (orphan brews).
 const palette = ['#011f5b', '#990000', '#2a6', '#c70', '#73c'];
-const beanColor = new Map<string, string>();
-const bagColorByBean = new Map(bags.map((b) => [b.bean, b.chartColor]));
-[...rawByBean.keys()].forEach((b, i) => {
-  beanColor.set(b, bagColorByBean.get(b) ?? palette[i % palette.length]);
+const bagColor = new Map<string, string>();
+[...rawByBagId.keys()].forEach((id, i) => {
+  const explicit = bagsByBagId.get(id)?.chartColor;
+  bagColor.set(id, explicit ?? palette[i % palette.length]);
 });
 
 // Pre-compute the fit polyline "points" string per fitted bean: sample the
@@ -180,9 +187,9 @@ const bagColorByBean = new Map(bags.map((b) => [b.bean, b.chartColor]));
 // model, and project through sx/sy. Drawn as a single <polyline> per bean —
 // keeps DOM cost flat (one element per bean's fit, not 40).
 const FIT_SAMPLES = 40;
-const fitPathByBean = new Map<string, string>();
-for (const [bean, fit] of fitByBean.entries()) {
-  const cleanXs = (rawByBean.get(bean) ?? [])
+const fitPathByBagId = new Map<string, string>();
+for (const [id, fit] of fitByBagId.entries()) {
+  const cleanXs = (rawByBagId.get(id) ?? [])
     .filter((p) => !p.tainted)
     .map((p) => p.x);
   if (cleanXs.length === 0) continue;
@@ -195,7 +202,7 @@ for (const [bean, fit] of fitByBean.entries()) {
     const yi = fit.a + fit.b * Math.log(xi + 1);
     pts.push(`${sx(xi).toFixed(1)},${sy(yi).toFixed(1)}`);
   }
-  fitPathByBean.set(bean, pts.join(' '));
+  fitPathByBagId.set(id, pts.join(' '));
 }
 
 // ---------- BAG PICKER ----------
@@ -203,10 +210,9 @@ for (const [bean, fit] of fitByBean.entries()) {
 //   1. Coming soon  (bought, not yet opened)
 //   2. Open         (default-selected)
 //   3. Past         (finished)
-// Visual order ≠ default selection — defaultBean still resolves to the open bag.
-// The dropdown label uses `bean · roastDate` rather than `bean · roaster` so
-// repeat purchases of the same bean (different roast date) stay distinct in
-// the picker.
+// Visual order ≠ default selection — defaultBagId still resolves to the open bag.
+// Option values use bagId (slug(bean)-roastDate) so repeat purchases of the
+// same bean don't collide; option labels still read `bean · roastDate`.
 const openBags = [...activeBeans].sort((a, b) =>
   (b.openedDate ?? '').localeCompare(a.openedDate ?? '')
 );
@@ -216,39 +222,45 @@ const comingSoonBags = [...comingSoonBeans].sort((a, b) =>
 const closedBags = [...pastBeans].sort((a, b) =>
   (b.closedDate ?? '').localeCompare(a.closedDate ?? '')
 );
-const defaultBean = openBags[0]?.bean ?? comingSoonBags[0]?.bean ?? closedBags[0]?.bean ?? '';
+const defaultBagId =
+  (openBags[0] && bagIdOf(openBags[0])) ??
+  (comingSoonBags[0] && bagIdOf(comingSoonBags[0])) ??
+  (closedBags[0] && bagIdOf(closedBags[0])) ??
+  '';
 
-// Per-bean shot counts. Used for the Log header meta text — updated client-side
+// Per-bag shot counts. Used for the Log header meta text — updated client-side
 // when the dropdown changes. Stashed on the section element as a data attribute
 // so the script can read it without another round-trip.
-const shotsByBean: Record<string, number> = {};
+const shotsByBagId: Record<string, number> = {};
 for (const e of brews) {
-  shotsByBean[e.bean] = (shotsByBean[e.bean] ?? 0) + 1;
+  const id = bagIdOf(e);
+  shotsByBagId[id] = (shotsByBagId[id] ?? 0) + 1;
 }
-const shotsByBeanJSON = JSON.stringify(shotsByBean);
+const shotsByBagIdJSON = JSON.stringify(shotsByBagId);
 
-// Per-bean log rows, in display order (newest first within each bean). Each
+// Per-bag log rows, in display order (newest first within each bag). Each
 // entry carries its original index in `brews` so the notes-detail row id stays
 // unique across templates and survives reordering.
 //
-// Only the default-selected bean's rows render directly into the table on SSR.
-// The remaining beans' rows live in <template> elements; their content is in an
+// Only the default-selected bag's rows render directly into the table on SSR.
+// The remaining bags' rows live in <template> elements; their content is in an
 // inert document fragment and is NOT counted toward Lighthouse's DOM-size audit.
 // The bag-picker script clones the matching template into the table on change.
 type IndexedBrew = { e: typeof brews[number]; i: number };
-const newestFirstByBean = new Map<string, IndexedBrew[]>();
+const newestFirstByBagId = new Map<string, IndexedBrew[]>();
 brews.forEach((e, i) => {
-  const list = newestFirstByBean.get(e.bean) ?? [];
+  const id = bagIdOf(e);
+  const list = newestFirstByBagId.get(id) ?? [];
   list.push({ e, i });
-  newestFirstByBean.set(e.bean, list);
+  newestFirstByBagId.set(id, list);
 });
-// Source array is append-only chronological, so reversing each per-bean list
+// Source array is append-only chronological, so reversing each per-bag list
 // gives newest-first AND later-submitted-first within the same date.
-for (const list of newestFirstByBean.values()) list.reverse();
+for (const list of newestFirstByBagId.values()) list.reverse();
 
-const defaultRows = newestFirstByBean.get(defaultBean) ?? [];
-const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
-  ([bean]) => bean !== defaultBean
+const defaultRows = newestFirstByBagId.get(defaultBagId) ?? [];
+const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
+  ([id]) => id !== defaultBagId
 );
 ---
 <Base
@@ -279,39 +291,50 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
     >
       {comingSoonBags.length > 0 && (
         <optgroup label="Coming soon">
-          {comingSoonBags.map((b) => (
-            <option value={b.bean} selected={b.bean === defaultBean}>
-              {b.bean} · {b.roastDate}
-            </option>
-          ))}
+          {comingSoonBags.map((b) => {
+            const id = bagIdOf(b);
+            return (
+              <option value={id} selected={id === defaultBagId}>
+                {b.bean} · {b.roastDate}
+              </option>
+            );
+          })}
         </optgroup>
       )}
       {openBags.length > 0 && (
         <optgroup label="Open">
-          {openBags.map((b) => (
-            <option value={b.bean} selected={b.bean === defaultBean}>
-              {b.bean} · {b.roastDate}
-            </option>
-          ))}
+          {openBags.map((b) => {
+            const id = bagIdOf(b);
+            return (
+              <option value={id} selected={id === defaultBagId}>
+                {b.bean} · {b.roastDate}
+              </option>
+            );
+          })}
         </optgroup>
       )}
       {closedBags.length > 0 && (
         <optgroup label="Past">
-          {closedBags.map((b) => (
-            <option value={b.bean} selected={b.bean === defaultBean}>
-              {b.bean} · {b.roastDate}
-            </option>
-          ))}
+          {closedBags.map((b) => {
+            const id = bagIdOf(b);
+            return (
+              <option value={id} selected={id === defaultBagId}>
+                {b.bean} · {b.roastDate}
+              </option>
+            );
+          })}
         </optgroup>
       )}
     </select>
   </section>
 
-  <div id="bag-scoped" data-selected-bean={defaultBean} data-shots-by-bean={shotsByBeanJSON}>
+  <div id="bag-scoped" data-selected-bag-id={defaultBagId} data-shots-by-bag-id={shotsByBagIdJSON}>
 
   <section class="block" id="bag-info">
     <div class="bean-grid">
-      {bags.map((b) => (
+      {bags.map((b) => {
+        const id = bagIdOf(b);
+        return (
         // SSR-hide non-default bean cards so first paint matches the post-script
         // state. Otherwise the grid lays out as 3+1 on desktop, then the picker
         // script hides 3 cards and the remaining card snaps from row1-col3 to
@@ -319,7 +342,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
         // scored ~0.091 on desktop run 1. JS toggle uses style.display, so
         // matching that here (inline style) lets removeProperty/'display'='none'
         // continue to work on dropdown change.
-        <div class="bean-card" data-bean={b.bean} style={b.bean === defaultBean ? undefined : 'display:none'}>
+        <div class="bean-card" data-bag-id={id} style={id === defaultBagId ? undefined : 'display:none'}>
           <div class="bean-name">{b.bean}</div>
           {b.roaster && <div class="bean-roaster">{b.roaster}</div>}
           {(() => {
@@ -365,7 +388,8 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
             <div class="bean-age">{daysBetween(today, b.roastDate)}d off roast</div>
           )}
         </div>
-      ))}
+        );
+      })}
     </div>
   </section>
 
@@ -463,12 +487,15 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
         <line x1={M.left} y1={M.top} x2={M.left} y2={M.top + innerH} stroke="#91928f" stroke-width="1" />
 
         {/* Individual shots, back layer. Clean shots → hollow dashed ring.
-            Tainted shots → small × marker in the bean's color (still on the
+            Tainted shots → small × marker in the bag's color (still on the
             chart, but the title says why it's excluded). */}
-        {[...rawByBean.entries()].map(([bean, points]) => {
-          const color = beanColor.get(bean) ?? '#011f5b';
+        {[...rawByBagId.entries()].map(([id, points]) => {
+          const color = bagColor.get(id) ?? '#011f5b';
+          const label = bagsByBagId.get(id)
+            ? `${bagsByBagId.get(id)!.bean} · ${bagsByBagId.get(id)!.roastDate}`
+            : id;
           return (
-            <g data-bean={bean}>
+            <g data-bag-id={id}>
               {points.map((p) => {
                 const cx = sx(p.x);
                 const cy = sy(p.y);
@@ -488,7 +515,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
                       stroke-opacity="0.7"
                       stroke-linecap="round"
                     >
-                      <title>{`${p.entry.date} · ${bean} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind} (excluded: ${p.entry.flag})`}</title>
+                      <title>{`${p.entry.date} · ${label} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind} (excluded: ${p.entry.flag})`}</title>
                     </path>
                   );
                 }
@@ -501,7 +528,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
                     stroke-opacity="0.55"
                     stroke-dasharray="2 1.5"
                   >
-                    <title>{`${p.entry.date} · ${bean} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind} (raw shot)`}</title>
+                    <title>{`${p.entry.date} · ${label} · ${p.x}d off · ${p.y.toFixed(2)} g/s · ${p.grind} (raw shot)`}</title>
                   </circle>
                 );
               })}
@@ -511,11 +538,14 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
 
         {/* Primary series: log-fit degradation curve + per-day mean dots
             (clean shots only). Fit is computed in the frontmatter. */}
-        {[...avgByBean.entries()].map(([bean, days]) => {
-          const color = beanColor.get(bean) ?? '#011f5b';
-          const fitPath = fitPathByBean.get(bean);
+        {[...avgByBagId.entries()].map(([id, days]) => {
+          const color = bagColor.get(id) ?? '#011f5b';
+          const fitPath = fitPathByBagId.get(id);
+          const label = bagsByBagId.get(id)
+            ? `${bagsByBagId.get(id)!.bean} · ${bagsByBagId.get(id)!.roastDate}`
+            : id;
           return (
-            <g data-bean={bean}>
+            <g data-bag-id={id}>
               {fitPath && (
                 <polyline
                   points={fitPath}
@@ -527,7 +557,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
               )}
               {days.map((d) => (
                 <circle cx={sx(d.x)} cy={sy(d.y)} r="4" fill={color}>
-                  <title>{`${d.date} · ${bean} · ${d.x}d off · ${d.y.toFixed(2)} g/s (mean of ${d.count} clean shot${d.count === 1 ? '' : 's'})`}</title>
+                  <title>{`${d.date} · ${label} · ${d.x}d off · ${d.y.toFixed(2)} g/s (mean of ${d.count} clean shot${d.count === 1 ? '' : 's'})`}</title>
                 </circle>
               ))}
             </g>
@@ -536,12 +566,16 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
       </svg>
 
       <figcaption class="chart-legend">
-        {[...rawByBean.keys()].map((bean) => (
-          <span class="legend-item" data-bean={bean}>
-            <span class="legend-dot" style={`background:${beanColor.get(bean)}`}></span>
-            {bean}
-          </span>
-        ))}
+        {[...rawByBagId.keys()].map((id) => {
+          const b = bagsByBagId.get(id);
+          const label = b ? `${b.bean} · ${b.roastDate}` : id;
+          return (
+            <span class="legend-item" data-bag-id={id}>
+              <span class="legend-dot" style={`background:${bagColor.get(id)}`}></span>
+              {label}
+            </span>
+          );
+        })}
         <span class="legend-item legend-note">
           <span class="legend-dot legend-dot-solid"></span>daily mean
           <span class="legend-dot legend-dot-ghost"></span>individual shot
@@ -567,7 +601,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
   <section class="block" id="log">
     <header>
       <h2>Log</h2>
-      <span class="meta" id="log-shot-count">{shotsByBean[defaultBean] ?? 0} shots</span>
+      <span class="meta" id="log-shot-count">{shotsByBagId[defaultBagId] ?? 0} shots</span>
     </header>
 
     <div class="log-table-wrap">
@@ -587,20 +621,20 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
           </tr>
         </thead>
         <tbody>
-          {/* Empty-state row per bag with no brews yet. Tagged with data-bean
+          {/* Empty-state row per bag with no brews yet. Tagged with data-bag-id
               so it inherits the same show/hide filter as real rows. */}
-          {bags.filter((b) => (shotsByBean[b.bean] ?? 0) === 0).map((b) => (
-            <tr class="log-row log-empty" data-bean={b.bean}>
+          {bags.filter((b) => (shotsByBagId[bagIdOf(b)] ?? 0) === 0).map((b) => (
+            <tr class="log-row log-empty" data-bag-id={bagIdOf(b)}>
               <td colspan="10" class="log-empty-cell">No shots logged yet for this bag.</td>
             </tr>
           ))}
-          {/* Only the default-selected bean's rows render in the table at SSR.
-              Other beans' rows live in <template> elements after the table and
+          {/* Only the default-selected bag's rows render in the table at SSR.
+              Other bags' rows live in <template> elements after the table and
               get swapped in by the bag-picker script. This keeps the initial DOM
               small for Lighthouse without changing the visible UX. */}
           {defaultRows.map(({ e, i }) => (
             <>
-              <tr class="log-row" data-bean={e.bean}>
+              <tr class="log-row" data-bag-id={bagIdOf(e)}>
                 <td>{e.date}</td>
                 <td>{daysBetween(e.date, e.roastDate)}d</td>
                 <td>{e.bean}</td>
@@ -632,7 +666,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
                 </td>
               </tr>
               {e.notes && (
-                <tr class="notes-detail" id={`brew-note-${i}`} data-bean={e.bean} hidden>
+                <tr class="notes-detail" id={`brew-note-${i}`} data-bag-id={bagIdOf(e)} hidden>
                   <td colspan="10" class="notes-detail-cell">{e.notes}</td>
                 </tr>
               )}
@@ -642,15 +676,15 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
       </table>
     </div>
 
-    {/* Inert <template> fragments — one per non-default bean. Content is in a
+    {/* Inert <template> fragments — one per non-default bag. Content is in a
         document fragment, NOT in the main document tree, so it does not count
         toward Lighthouse's DOM-size audit. The bag-picker script clones the
         matching template's content into the table tbody on selection change. */}
-    {nonDefaultRowsByBean.map(([bean, rows]) => (
-      <template data-brews-template={bean}>
+    {nonDefaultRowsByBagId.map(([id, rows]) => (
+      <template data-brews-template={id}>
         {rows.map(({ e, i }) => (
           <>
-            <tr class="log-row" data-bean={e.bean}>
+            <tr class="log-row" data-bag-id={bagIdOf(e)}>
               <td>{e.date}</td>
               <td>{daysBetween(e.date, e.roastDate)}d</td>
               <td>{e.bean}</td>
@@ -682,7 +716,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
               </td>
             </tr>
             {e.notes && (
-              <tr class="notes-detail" id={`brew-note-${i}`} data-bean={e.bean} hidden>
+              <tr class="notes-detail" id={`brew-note-${i}`} data-bag-id={bagIdOf(e)} hidden>
                 <td colspan="10" class="notes-detail-cell">{e.notes}</td>
               </tr>
             )}
@@ -736,7 +770,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
     });
 
     // Bag picker: hide chart elements, legend items, bean cards, and empty-state
-    // log rows whose data-bean does not match the selected option. Log content
+    // log rows whose data-bag-id does not match the selected option. Log content
     // rows are NOT in the static DOM for non-default bags — they live in
     // <template> elements and get cloned into the table only when needed. This
     // keeps the initial DOM small for Lighthouse.
@@ -752,14 +786,14 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
 
       let counts: Record<string, number> = {};
       try {
-        counts = JSON.parse(scope.dataset.shotsByBean ?? '{}');
+        counts = JSON.parse(scope.dataset.shotsByBagId ?? '{}');
       } catch { counts = {}; }
 
-      // Log-table swap: capture the SSR'd default-bean rows once so we can
-      // restore them when the user picks the default bean again. Non-default
-      // beans' rows come from <template data-brews-template="…"> fragments.
+      // Log-table swap: capture the SSR'd default-bag rows once so we can
+      // restore them when the user picks the default bag again. Non-default
+      // bags' rows come from <template data-brews-template="…"> fragments.
       const tbody = scope.querySelector('.log-table tbody') as HTMLElement | null;
-      const defaultBean = scope.getAttribute('data-selected-bean') ?? '';
+      const defaultBagId = scope.getAttribute('data-selected-bag-id') ?? '';
       const logRowSelector = 'tr.log-row:not(.log-empty), tr.notes-detail';
       let initialDefaultRowsHTML: string | null = null;
       if (tbody) {
@@ -767,38 +801,38 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
           .map((r) => (r as HTMLElement).outerHTML)
           .join('');
       }
-      let currentBean = defaultBean;
+      let currentBagId = defaultBagId;
 
-      function setLogRows(bean: string) {
-        if (!tbody || bean === currentBean) return;
+      function setLogRows(bagId: string) {
+        if (!tbody || bagId === currentBagId) return;
         // Remove existing content rows (keep empty-state rows in place; those
-        // are toggled separately by the [data-bean] display loop below).
+        // are toggled separately by the [data-bag-id] display loop below).
         tbody.querySelectorAll(logRowSelector).forEach((el) => el.remove());
         let html = '';
-        if (bean === defaultBean) {
+        if (bagId === defaultBagId) {
           html = initialDefaultRowsHTML ?? '';
         } else {
           const tpl = document.querySelector(
-            `template[data-brews-template="${CSS.escape(bean)}"]`
+            `template[data-brews-template="${CSS.escape(bagId)}"]`
           ) as HTMLTemplateElement | null;
           html = tpl?.innerHTML ?? '';
         }
         if (html) tbody.insertAdjacentHTML('beforeend', html);
-        currentBean = bean;
+        currentBagId = bagId;
       }
 
-      function applyFilter(bean: string) {
-        scope!.setAttribute('data-selected-bean', bean);
+      function applyFilter(bagId: string) {
+        scope!.setAttribute('data-selected-bag-id', bagId);
 
-        // Swap log content rows first so the [data-bean] loop below sees the
-        // newly-inserted rows for the selected bean (they're all matches, so
+        // Swap log content rows first so the [data-bag-id] loop below sees the
+        // newly-inserted rows for the selected bag (they're all matches, so
         // the loop becomes a no-op for them — but it still hides empty-state
         // rows for non-selected bags).
-        setLogRows(bean);
+        setLogRows(bagId);
 
-        // Toggle every data-bean element inside the scope.
-        scope!.querySelectorAll<HTMLElement>('[data-bean]').forEach((el) => {
-          const match = el.getAttribute('data-bean') === bean;
+        // Toggle every data-bag-id element inside the scope.
+        scope!.querySelectorAll<HTMLElement>('[data-bag-id]').forEach((el) => {
+          const match = el.getAttribute('data-bag-id') === bagId;
           if (match) {
             el.style.removeProperty('display');
           } else {
@@ -814,7 +848,7 @@ const nonDefaultRowsByBean = [...newestFirstByBean.entries()].filter(
         });
 
         if (countEl) {
-          const n = counts[bean] ?? 0;
+          const n = counts[bagId] ?? 0;
           countEl.textContent = `${n} shot${n === 1 ? '' : 's'}`;
         }
       }
