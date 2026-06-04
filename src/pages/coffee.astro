@@ -97,16 +97,39 @@ for (const [id, shots] of rawByBagId.entries()) {
   avgByBagId.set(id, days);
 }
 
-// Per-bean degradation fit: y = a + b·ln(x + 1), via closed-form OLS on the
+// Per-cohort degradation fit: y = a + b·ln(x + 1), via closed-form OLS on the
 // transformed regressor u = ln(x + 1). Right shape for the 5–30-day window
 // where outgassing is still rising (fast early, slowing toward a plateau)
 // without a 3-parameter nonlinear fit. Computed from clean shots only.
-// Beans with <3 clean shots or <3 distinct clean days off roast get no fit
+//
+// A "cohort" is (bagId, grind). Splitting by grind avoids confounding the
+// degradation fit when the user changes grind setting mid-bag: a finer grind
+// shifts the absolute flow-rate baseline, which would otherwise look like
+// (or mask) a real outgassing change. Each cohort gets its own curve.
+//
+// Cohorts with <3 clean shots or <3 distinct clean days off roast get no fit
 // (their dots still render — the chart just doesn't draw a curve through too
 // little data).
 type Fit = { a: number; b: number };
-const fitByBagId = new Map<string, Fit>();
-for (const [id, shots] of rawByBagId.entries()) {
+function cohortKey(bagId: string, grind: string): string {
+  return `${bagId}::${grind}`;
+}
+// Group shots by cohort and track first-shot date per cohort so cohorts on
+// the same bag can be ordered chronologically for stroke-style assignment.
+const cohortShots = new Map<string, Point[]>();
+const cohortFirstDate = new Map<string, string>();
+for (const [bagId, shots] of rawByBagId.entries()) {
+  for (const p of shots) {
+    const c = cohortKey(bagId, p.grind);
+    const list = cohortShots.get(c) ?? [];
+    list.push(p);
+    cohortShots.set(c, list);
+    const prev = cohortFirstDate.get(c);
+    if (!prev || p.entry.date < prev) cohortFirstDate.set(c, p.entry.date);
+  }
+}
+const fitByCohortId = new Map<string, Fit>();
+for (const [cohortId, shots] of cohortShots.entries()) {
   const clean = shots.filter((p) => !p.tainted);
   const distinctDays = new Set(clean.map((p) => p.x));
   if (clean.length < 3 || distinctDays.size < 3) continue;
@@ -123,7 +146,7 @@ for (const [id, shots] of rawByBagId.entries()) {
   if (Math.abs(denom) < 1e-12) continue;  // x's collapsed; no fit
   const b = (n * sUY - sU * sY) / denom;
   const a = (sY - b * sU) / n;
-  fitByBagId.set(id, { a, b });
+  fitByCohortId.set(cohortId, { a, b });
 }
 
 // Chart geometry
@@ -181,28 +204,44 @@ const bagColor = new Map<string, string>();
   bagColor.set(id, explicit ?? palette[i % palette.length]);
 });
 
-// Pre-compute the fit polyline "points" string per fitted bean: sample the
-// fitted curve at FIT_SAMPLES+1 evenly spaced x values across the bean's
-// observed clean-shot x range (clamped to the chart x domain), evaluate the
-// model, and project through sx/sy. Drawn as a single <polyline> per bean —
-// keeps DOM cost flat (one element per bean's fit, not 40).
+// Pre-compute fit polylines per cohort, grouped by bag for the render loop.
+// One <polyline> per fitted cohort. Cohort index within a bag (in chronological
+// order of first shot) drives stroke-dasharray so multiple cohorts on the same
+// bag stay visually distinct: solid (0), dashed (1), dotted (2+).
+// Per-cohort polyline keeps DOM cost flat (one element per cohort's fit, not 40).
 const FIT_SAMPLES = 40;
-const fitPathByBagId = new Map<string, string>();
-for (const [id, fit] of fitByBagId.entries()) {
-  const cleanXs = (rawByBagId.get(id) ?? [])
-    .filter((p) => !p.tainted)
-    .map((p) => p.x);
-  if (cleanXs.length === 0) continue;
-  const xLo = Math.max(xMin, Math.min(...cleanXs));
-  const xHi = Math.min(xMax, Math.max(...cleanXs));
-  if (xHi <= xLo) continue;
-  const pts: string[] = [];
-  for (let i = 0; i <= FIT_SAMPLES; i++) {
-    const xi = xLo + ((xHi - xLo) * i) / FIT_SAMPLES;
-    const yi = fit.a + fit.b * Math.log(xi + 1);
-    pts.push(`${sx(xi).toFixed(1)},${sy(yi).toFixed(1)}`);
-  }
-  fitPathByBagId.set(id, pts.join(' '));
+const DASH_BY_INDEX: Array<string | undefined> = [undefined, '5 4', '1 3'];
+type CohortFit = { path: string; dashArray: string | undefined; grind: string };
+const fitsByBagId = new Map<string, CohortFit[]>();
+for (const bagId of rawByBagId.keys()) {
+  // Cohorts for this bag, ordered chronologically by first-shot date.
+  const cohortsForBag = [...cohortShots.entries()]
+    .filter(([cId]) => cId.startsWith(`${bagId}::`))
+    .sort((a, b) =>
+      (cohortFirstDate.get(a[0]) ?? '').localeCompare(cohortFirstDate.get(b[0]) ?? '')
+    );
+  const fits: CohortFit[] = [];
+  cohortsForBag.forEach(([cohortId, shots], idx) => {
+    const fit = fitByCohortId.get(cohortId);
+    if (!fit) return;
+    const cleanXs = shots.filter((p) => !p.tainted).map((p) => p.x);
+    if (cleanXs.length === 0) return;
+    const xLo = Math.max(xMin, Math.min(...cleanXs));
+    const xHi = Math.min(xMax, Math.max(...cleanXs));
+    if (xHi <= xLo) return;
+    const pts: string[] = [];
+    for (let i = 0; i <= FIT_SAMPLES; i++) {
+      const xi = xLo + ((xHi - xLo) * i) / FIT_SAMPLES;
+      const yi = fit.a + fit.b * Math.log(xi + 1);
+      pts.push(`${sx(xi).toFixed(1)},${sy(yi).toFixed(1)}`);
+    }
+    fits.push({
+      path: pts.join(' '),
+      dashArray: DASH_BY_INDEX[idx] ?? '1 3',
+      grind: shots[0]?.grind ?? '',
+    });
+  });
+  if (fits.length > 0) fitsByBagId.set(bagId, fits);
 }
 
 // ---------- BAG PICKER ----------
@@ -540,21 +579,24 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
             (clean shots only). Fit is computed in the frontmatter. */}
         {[...avgByBagId.entries()].map(([id, days]) => {
           const color = bagColor.get(id) ?? '#011f5b';
-          const fitPath = fitPathByBagId.get(id);
+          const cohortFits = fitsByBagId.get(id) ?? [];
           const label = bagsByBagId.get(id)
             ? `${bagsByBagId.get(id)!.bean} · ${bagsByBagId.get(id)!.roastDate}`
             : id;
           return (
             <g data-bag-id={id}>
-              {fitPath && (
+              {cohortFits.map((cf) => (
                 <polyline
-                  points={fitPath}
+                  points={cf.path}
                   fill="none"
                   stroke={color}
                   stroke-width="0.8"
                   stroke-opacity="0.65"
-                />
-              )}
+                  stroke-dasharray={cf.dashArray}
+                >
+                  <title>{`${label} · ${cf.grind} fit`}</title>
+                </polyline>
+              ))}
               {days.map((d) => (
                 <circle cx={sx(d.x)} cy={sy(d.y)} r="4" fill={color}>
                   <title>{`${d.date} · ${label} · ${d.x}d off · ${d.y.toFixed(2)} g/s (mean of ${d.count} clean shot${d.count === 1 ? '' : 's'})`}</title>
@@ -586,11 +628,14 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
 
     <p class="chart-note">
       Higher flow = less puck resistance. Rising trend at the same grind
-      suggests beans losing CO<sub>2</sub>. The curve through each bean is a
-      logarithmic fit (y = a + b·ln(x + 1)) on clean shots only; it captures
-      the fast-early, slowing degradation shape without overfitting the
-      handful of data points per bag. Solid dots are per-day averages of
-      clean shots, hollow dashed rings are individual clean shots, and
+      suggests beans losing CO<sub>2</sub>. Each curve is a logarithmic fit
+      (y = a + b·ln(x + 1)) on clean shots only; it captures the fast-early,
+      slowing degradation shape without overfitting the handful of data
+      points per bag. Fits are computed per grind setting — bags brewed
+      with multiple grinds get one curve per grind, distinguished by stroke
+      style (solid, then dashed, then dotted in the order each grind was
+      first used). Solid dots are per-day averages of clean shots, hollow
+      dashed rings are individual clean shots, and
       <span aria-hidden="true">×</span> marks shots excluded from the math
       (dial-in sweeps, prep mistakes, or process errors — hover for the
       reason). Shaded band is the rough espresso peak window
