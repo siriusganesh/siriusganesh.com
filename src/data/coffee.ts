@@ -210,10 +210,10 @@ export const bags: Bag[] = [
     chartColor: '#3a73a8',
   },
   {
-    // Coming soon: first bag from Gerberus Coffee. Three-way equal-split blend
+    // Coming soon: first bag from Cerberus Coffee. Three-way equal-split blend
     // (Brazil + Peru + Ethiopia), marketed as espresso-first but versatile.
     bean: 'Wizard Cat',
-    roaster: 'Gerberus Coffee',
+    roaster: 'Cerberus Coffee',
     roastDate: '2026-05-27',
     type: 'espresso blend',
     roastLevel: 'medium',
