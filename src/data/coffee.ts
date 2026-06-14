@@ -1818,6 +1818,20 @@ export const brews: BrewEntry[] = [
     puckScreen: true,
     method: 'espresso',
   },
+  {
+    date: '2026-06-14',
+    bean: 'Wizard Cat',
+    roaster: 'Cerberus Coffee',
+    roastDate: '2026-05-27',
+    doseG: 15.5,
+    yieldG: 40.8,
+    timeS: 21,
+    grind: 'DF64 #6',
+    basket: 'DEX 15g',
+    temp: 'Mid',
+    puckScreen: true,
+    method: 'espresso',
+  },
 ];
 
 // Helpers used by the page. Kept here so the page file stays about layout.
