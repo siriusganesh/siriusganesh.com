@@ -2087,6 +2087,8 @@ export const brews: BrewEntry[] = [
     temp: 'Mid',
     puckScreen: true,
     method: 'espresso',
+    notes: 'Lost track of the pour; yield ran past target.',
+    flag: 'process-error',
   },
   {
     date: '2026-06-25',
