@@ -72,8 +72,9 @@ export type Bag = {
   elevation?: string;           // free-text MASL ("1,800 MASL", "1,700–1,800 MASL")
   varieties?: string[];         // cultivar names
   harvest?: string;             // month range ("April–May", "November–April")
-  certifications?: string[];    // e.g. ["organic"], ["organic", "fair trade"]. Rendered
-                                // as a comma-separated list in the details table.
+  certifications?: string[];    // e.g. ["Organic"], ["Organic", "Fair Trade"]. TitleCase
+                                // (like varieties). Rendered as a comma-separated list in
+                                // the details table.
 
   // chartColor: hex color used for this bag's series in the degradation chart
   // (and the matching legend swatch). Sampled from the bag's packaging so
@@ -243,7 +244,7 @@ export const bags: Bag[] = [
     producer: 'Ricardo Ibarra Baumann',
     elevation: '1,100–1,400 MASL',
     harvest: 'October–March',
-    certifications: ['organic'],
+    certifications: ['Organic'],
     chartColor: '#4d7a2a',
   },
 ];
