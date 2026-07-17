@@ -72,6 +72,8 @@ export type Bag = {
   elevation?: string;           // free-text MASL ("1,800 MASL", "1,700–1,800 MASL")
   varieties?: string[];         // cultivar names
   harvest?: string;             // month range ("April–May", "November–April")
+  certifications?: string[];    // e.g. ["organic"], ["organic", "fair trade"]. Rendered
+                                // as a comma-separated list in the details table.
 
   // chartColor: hex color used for this bag's series in the degradation chart
   // (and the matching legend swatch). Sampled from the bag's packaging so
@@ -224,6 +226,25 @@ export const bags: Bag[] = [
     origin: 'Brazil + Peru + Ethiopia',
     tastingNotes: ['chocolate', 'fruity', 'berry'],
     chartColor: '#c2456b',
+  },
+  {
+    // Coming soon: Finca Nuevo México, La Concordia, Chiapas. Family-owned
+    // organic farm (Ricardo Ibarra Baumann, 1978–), ~1,300 MASL, 75ha coffee
+    // production alongside 320ha protected reserve. Three-stage selective
+    // picking of fully ripe cherries only.
+    bean: 'Mexico',
+    roaster: 'La Cosecha',
+    roastDate: '2026-07-14',
+    type: 'single origin',
+    process: 'washed',
+    roastLevel: 'medium',
+    origin: 'Chiapas, Mexico',
+    tastingNotes: ['honey', 'milk chocolate', 'walnut'],
+    producer: 'Ricardo Ibarra Baumann',
+    elevation: '1,100–1,400 MASL',
+    harvest: 'October–March',
+    certifications: ['organic'],
+    chartColor: '#4d7a2a',
   },
 ];
 
