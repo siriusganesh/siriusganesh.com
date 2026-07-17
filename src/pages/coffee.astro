@@ -396,7 +396,7 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
           )}
           {/* Optional single-origin detail block. Each row only renders when
               the field is set, so blends and minimal entries collapse cleanly. */}
-          {(b.producer || b.elevation || (b.varieties && b.varieties.length > 0) || b.harvest) && (
+          {(b.producer || b.elevation || (b.varieties && b.varieties.length > 0) || b.harvest || (b.certifications && b.certifications.length > 0)) && (
             <table class="bean-details">
               {b.producer && (
                 <tr><td>producer</td><td>{b.producer}</td></tr>
@@ -409,6 +409,9 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
               )}
               {b.harvest && (
                 <tr><td>harvest</td><td>{b.harvest}</td></tr>
+              )}
+              {b.certifications && b.certifications.length > 0 && (
+                <tr><td>certifications</td><td>{b.certifications.join(', ')}</td></tr>
               )}
             </table>
           )}
