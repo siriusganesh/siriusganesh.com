@@ -2829,12 +2829,12 @@ export const brews: BrewEntry[] = [
     doseG: 15.5,
     yieldG: 37.9,
     timeS: 23,
-    grind: 'DF64 #5',
+    grind: 'DF64 #6',
     basket: 'DEX 15g',
     temp: 'Mid',
     puckScreen: true,
     method: 'espresso',
-    notes: 'First shot of the new Mexico bag. Settings inherited from previous Guatemala bag (DF64 #5, Mid).',
+    notes: 'First shot of the new Mexico bag. DF64 #6, Mid — coarser than the previous Guatemala bag (which ran DF64 #5) since Mexico is a medium roast.',
   },
 ];
 
