@@ -2836,6 +2836,20 @@ export const brews: BrewEntry[] = [
     method: 'espresso',
     notes: 'First shot of the new Mexico bag. DF64 #6, Mid — coarser than the previous Guatemala bag (which ran DF64 #5) since Mexico is a medium roast.',
   },
+  {
+    date: '2026-07-22',
+    bean: 'Mexico',
+    roaster: 'La Cosecha',
+    roastDate: '2026-07-14',
+    doseG: 15.5,
+    yieldG: 37.1,
+    timeS: 20,
+    grind: 'DF64 #6',
+    basket: 'DEX 15g',
+    temp: 'Mid',
+    puckScreen: true,
+    method: 'espresso',
+  },
 ];
 
 // Helpers used by the page. Kept here so the page file stays about layout.
