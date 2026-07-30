@@ -56,7 +56,13 @@ export type Bag = {
   specialRelease?: boolean;
   type?: 'single origin' | 'blend' | 'espresso blend';
   process?: 'washed' | 'honey' | 'natural' | 'anaerobic';
-  roastLevel?: 'light' | 'light-medium' | 'medium' | 'medium-dark' | 'dark';
+  roastLevel?:
+    | 'ultra light'
+    | 'light'
+    | 'light-medium'
+    | 'medium'
+    | 'medium-dark'
+    | 'dark';
 
   // origin: one-line human-readable origin description.
   //   single origin → region/country (e.g. "El Progreso, Guatemala", "Yirgacheffe, Ethiopia")
@@ -110,6 +116,41 @@ export function bagBadges(b: Bag): string[] {
   if (b.process) out.push(b.process);
   if (b.roastLevel) out.push(b.roastLevel);
   return out;
+}
+
+export type RoastLevel = NonNullable<Bag['roastLevel']>;
+
+/**
+ * Peak drinking window per roast level, as [openDay, closeDay] in days off
+ * roast. Darker roasts are more developed, outgas faster, and stale sooner,
+ * so their window opens and closes earlier. Lighter roasts need longer to
+ * finish outgassing and then hold longer.
+ *
+ *   dark          7 – 14  (1 – 2 weeks)
+ *   medium-dark   8 – 17  (interpolated: between dark and medium)
+ *   medium       10 – 21  (10 days – 3 weeks)
+ *   light-medium 14 – 24  (interpolated: between medium and light)
+ *   light        18 – 28  (2.5 – 4 weeks; 17.5 rounded up to a whole day)
+ *   ultra light  21 – 42  (3 – 6 weeks)
+ *
+ * These are rules of thumb for espresso on this rig, not measurements. The
+ * chart shades the band for the selected bag only, and shades nothing when
+ * the bag has no roastLevel set — better no claim than a wrong one.
+ */
+export const PEAK_WINDOW_DAYS: Record<RoastLevel, readonly [number, number]> = {
+  dark: [7, 14],
+  'medium-dark': [8, 17],
+  medium: [10, 21],
+  'light-medium': [14, 24],
+  light: [18, 28],
+  'ultra light': [21, 42],
+};
+
+/** Peak window for a bag, or undefined when the bag has no roastLevel. */
+export function peakWindowFor(
+  b: Pick<Bag, 'roastLevel'> | undefined
+): readonly [number, number] | undefined {
+  return b?.roastLevel ? PEAK_WINDOW_DAYS[b.roastLevel] : undefined;
 }
 
 // Backward-compatible alias for the old type name.
