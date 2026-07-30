@@ -12,6 +12,7 @@ import {
   daysBetween,
   flowRate,
   ratio,
+  peakWindowFor,
 } from '../data/coffee';
 
 // Reverse-chronological log for display: newest dates first, and within a single
@@ -178,9 +179,30 @@ function sy(y: number): number {
   return M.top + innerH - ((y - yMin) / (yMax - yMin)) * innerH;
 }
 
-// Peak-window shading (espresso rule of thumb: 7 - 21 days off roast).
-const peakX1 = sx(7);
-const peakX2 = sx(21);
+// Peak-window shading, per bag. The window depends on roast level (darker
+// roasts peak earlier and fall off sooner — see PEAK_WINDOW_DAYS), so a single
+// global band would be wrong for most bags. The page is scoped to one bag at a
+// time by the picker, so each bag gets its own <g data-bag-id> band and the
+// existing display-toggle loop reveals the one for the selected bag.
+//
+// Bands are clamped to the plot area: the ultra-light window runs to 42d while
+// the x-axis floors at 30d, so an unclamped rect would paint past the axes.
+// The x-axis is deliberately NOT widened to fit the band — the axis follows the
+// data, not the annotation. A band whose whole window sits off-axis is dropped.
+//
+// Bags with no roastLevel get no band. Orphan brews (a bagId with no matching
+// Bag entry) likewise get none, since they're not iterated here.
+type PeakBand = { x: number; width: number; level: string };
+const peakBandByBagId = new Map<string, PeakBand>();
+for (const b of bags) {
+  const win = peakWindowFor(b);
+  if (!win) continue;
+  const clamp = (d: number) => Math.min(Math.max(d, xMin), xMax);
+  const x1 = sx(clamp(win[0]));
+  const x2 = sx(clamp(win[1]));
+  if (x2 - x1 < 1) continue;  // window entirely off the visible axis
+  peakBandByBagId.set(bagIdOf(b), { x: x1, width: x2 - x1, level: b.roastLevel! });
+}
 
 // X-axis ticks every 5 days
 const xTicks: number[] = [];
@@ -443,25 +465,43 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
 
     <figure class="chart">
       <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow rate vs days off roast">
-        {/* peak-window shaded band */}
-        <rect
-          x={peakX1}
-          y={M.top}
-          width={peakX2 - peakX1}
-          height={innerH}
-          fill="#dbe3f5"
-          opacity="0.45"
-        />
-        <text
-          x={(peakX1 + peakX2) / 2}
-          y={M.top + 12}
-          text-anchor="middle"
-          font-size="10"
-          fill="#616160"
-          font-family="IBM Plex Mono, monospace"
-        >
-          peak window
-        </text>
+        {/* Peak-window shaded band, one per bag, keyed on roast level.
+            Non-selected bags' bands are SSR-hidden so first paint matches the
+            post-script state (same pattern as the bean cards above). The label
+            is stacked on two lines so it still fits the narrower dark-roast
+            band without overflowing the rect. */}
+        {[...peakBandByBagId.entries()].map(([id, band]) => (
+          <g data-bag-id={id} style={id === defaultBagId ? undefined : 'display:none'}>
+            <rect
+              x={band.x}
+              y={M.top}
+              width={band.width}
+              height={innerH}
+              fill="#dbe3f5"
+              opacity="0.45"
+            />
+            <text
+              x={band.x + band.width / 2}
+              y={M.top + 12}
+              text-anchor="middle"
+              font-size="10"
+              fill="#616160"
+              font-family="IBM Plex Mono, monospace"
+            >
+              peak window
+            </text>
+            <text
+              x={band.x + band.width / 2}
+              y={M.top + 24}
+              text-anchor="middle"
+              font-size="10"
+              fill="#616160"
+              font-family="IBM Plex Mono, monospace"
+            >
+              {band.level}
+            </text>
+          </g>
+        ))}
 
         {/* gridlines + x-axis ticks */}
         {xTicks.map((t) => (
@@ -641,8 +681,11 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
       dashed rings are individual clean shots, and
       <span aria-hidden="true">×</span> marks shots excluded from the math
       (dial-in sweeps, prep mistakes, or process errors — hover for the
-      reason). Shaded band is the rough espresso peak window
-      (7 – 21 days off roast).
+      reason). Shaded band is the rough espresso peak window for the selected
+      bag's roast level — dark 7 – 14d, medium-dark 8 – 17d, medium 10 – 21d,
+      light-medium 14 – 24d, light 18 – 28d, ultra light 21 – 42d. Darker
+      roasts outgas faster and stale sooner, so their window opens and closes
+      earlier. Bags with no roast level recorded get no band.
     </p>
   </section>
 
