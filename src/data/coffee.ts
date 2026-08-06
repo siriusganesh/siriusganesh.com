@@ -291,6 +291,42 @@ export const bags: Bag[] = [
     certifications: ['Organic'],
     chartColor: '#4d7a2a',
   },
+  {
+    // Coming soon: Timuza Coffee Cooperative — ~260 smallholder farmers of the
+    // Kamano tribal group, farms averaging 1.4ha around Namura near Kainantu.
+    // Black/red loam under casuarina and albizia shade. Hand-picked, manually
+    // pulped, fermented in traditional bilum bags, patio and solar dried.
+    // Won 1st place in PNG's 2016 National Cupping Competition.
+    bean: 'Papua New Guinea',
+    roaster: 'La Cosecha',
+    roastDate: '2026-07-28',
+    type: 'single origin',
+    process: 'washed',
+    roastLevel: 'medium-dark',
+    origin: 'Kamano-Kainantu, Eastern Highlands Province',
+    tastingNotes: ['molasses', 'cocoa', 'dried fruit'],
+    producer: 'Timuza Coffee Cooperative',
+    elevation: '1,550–1,800 MASL',
+    varieties: ['Arusha', 'Mundo Novo', 'Typica'],
+    harvest: 'April–October',
+    certifications: ['Organic'],
+    chartColor: '#2a3a7a',
+  },
+  {
+    // Coming soon: "Sendero" = trailhead in Spanish. Brazil + Colombia
+    // espresso blend, versatile across brew methods. Producers, varieties,
+    // and harvest are all "various" for this blend, so those fields are
+    // omitted rather than filled with placeholder text.
+    bean: 'Sendero',
+    roaster: 'La Cosecha',
+    roastDate: '2026-07-28',
+    type: 'espresso blend',
+    roastLevel: 'light-medium',
+    origin: 'Brazil + Colombia',
+    tastingNotes: ['bright', 'elaborate body', 'crisp finish'],
+    elevation: '1,200–2,200 MASL',
+    chartColor: '#d64525',
+  },
 ];
 
 // Derived views. activeBeans = bags currently being brewed (drives the
