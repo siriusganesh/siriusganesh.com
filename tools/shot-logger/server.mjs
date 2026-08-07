@@ -10,9 +10,9 @@
 // Notes:
 // - All git work happens in a throwaway worktree under /tmp, so the main
 //   checkout is never touched, even if it is dirty or on another branch.
-// - Merge gate: both Lighthouse checks (mobile + desktop) must conclude
-//   green. LHCI assertions are warn-only, so this gates on the build and
-//   runs completing, not on score floors.
+// - Merge gate: every reported check must conclude green. Shot PRs skip
+//   Lighthouse via the workflow's paths-ignore, so in practice this waits
+//   on the Cloudflare Pages build — which still fails if the site breaks.
 // - Bags are read-only here. Adding/opening/closing bags stays a chat task.
 
 import http from 'node:http';
@@ -216,7 +216,7 @@ async function runPipeline(job, shots) {
     await git(['branch', '-D', branch]);
     branch = null;
 
-    jlog(job, 'Waiting for Lighthouse checks (mobile + desktop)…');
+    jlog(job, 'Waiting for CI checks…');
     const verdict = await waitForChecks(job, prUrl);
 
     if (verdict === 'pass') {
@@ -256,9 +256,11 @@ async function waitForChecks(job, prUrl) {
       }
     }
     const checks = JSON.parse(raw);
-    const lighthouse = checks.filter((c) => /lighthouse/i.test(c.name));
     if (checks.some((c) => c.bucket === 'fail')) return 'fail';
-    if (lighthouse.length >= 2 && lighthouse.every((c) => c.bucket === 'pass')) return 'pass';
+    // Merge once at least one check exists and none are pending or failing.
+    // Shot PRs skip Lighthouse (paths-ignore), so this is the Pages build.
+    if (checks.length > 0 && checks.every((c) => c.bucket === 'pass' || c.bucket === 'skipping'))
+      return 'pass';
     jlog(
       job,
       `Pending: ${checks.filter((c) => c.bucket === 'pending').map((c) => c.name).join(', ') || 'waiting for checks to appear'}`,
