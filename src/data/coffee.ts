@@ -300,6 +300,7 @@ export const bags: Bag[] = [
     bean: 'Papua New Guinea',
     roaster: 'La Cosecha',
     roastDate: '2026-07-28',
+    openedDate: '2026-08-07',
     type: 'single origin',
     process: 'washed',
     roastLevel: 'medium-dark',
