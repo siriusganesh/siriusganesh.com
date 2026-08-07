@@ -1,8 +1,11 @@
 # Shot logger
 
 Local web app that logs espresso shots to `src/data/coffee.ts` and ships them
-without a chat session: feature branch → push → PR → wait for Lighthouse
-checks → squash-merge.
+without a chat session: feature branch → push → PR → wait for CI checks →
+squash-merge. Shots queue into a batch and ship together as one commit/PR;
+basket and temp fields offer prior values from the log history. Shot PRs
+skip Lighthouse (workflow paths-ignore); the Cloudflare Pages build is the
+merge gate.
 
 ```
 node tools/shot-logger/server.mjs
@@ -21,10 +24,11 @@ Requires Node ≥ 22.6 and an authenticated `gh`. Binds to localhost only.
   object literal before the closing `];` of `brews`, then re-imports the
   file as a syntax gate before committing. No schema migration, no JSON
   sidecar.
-- **Merge gate = both Lighthouse checks green.** LHCI assertions are
-  warn-only, so this gates on the build and both runs completing, not on
-  score floors. A failed or timed-out check leaves the PR open for manual
-  review instead of merging.
+- **Merge gate = all reported checks green.** Shot PRs skip Lighthouse via
+  the workflow's paths-ignore (scoring a page that gained one data point
+  wastes ~8 runner-minutes), so the gate is the Cloudflare Pages build,
+  which still fails on a broken site. A failed or timed-out check leaves
+  the PR open for manual review instead of merging.
 - **Bags are read-only.** Opening, closing, and adding bags needs judgment
   (chart colors sampled from packaging, badge metadata), so that stays a
   chat task.

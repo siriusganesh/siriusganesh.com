@@ -10,9 +10,9 @@
 // Notes:
 // - All git work happens in a throwaway worktree under /tmp, so the main
 //   checkout is never touched, even if it is dirty or on another branch.
-// - Merge gate: both Lighthouse checks (mobile + desktop) must conclude
-//   green. LHCI assertions are warn-only, so this gates on the build and
-//   runs completing, not on score floors.
+// - Merge gate: every reported check must conclude green. Shot PRs skip
+//   Lighthouse via the workflow's paths-ignore, so in practice this waits
+//   on the Cloudflare Pages build — which still fails if the site breaks.
 // - Bags are read-only here. Adding/opening/closing bags stays a chat task.
 
 import http from 'node:http';
@@ -70,7 +70,13 @@ async function getState() {
           : null,
       };
     });
-  return { today: localToday(), bags: openBags };
+  const distinct = (key) => [...new Set(brews.map((e) => e[key]).filter(Boolean))];
+  return {
+    today: localToday(),
+    bags: openBags,
+    baskets: distinct('basket'),
+    temps: distinct('temp'),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -165,12 +171,14 @@ async function pickBranchName() {
   throw new Error('could not find a free branch name');
 }
 
-function commitMessage(entry) {
-  const [, m, d] = entry.date.split('-').map(Number);
-  return `coffee: log ${m}/${d} ${entry.bean} shot`;
+function commitMessage(shots) {
+  const [, m, d] = shots[0].date.split('-').map(Number);
+  const beans = [...new Set(shots.map((s) => s.bean))];
+  const what = beans.length === 1 ? `${beans[0]} shot${shots.length > 1 ? 's' : ''}` : 'shots';
+  return `coffee: log ${m}/${d} ${what}`;
 }
 
-async function runPipeline(job, entry) {
+async function runPipeline(job, shots) {
   const worktree = path.join('/tmp', 'shot-logger', `wt-${Date.now()}`);
   let branch = null;
   try {
@@ -183,14 +191,14 @@ async function runPipeline(job, entry) {
 
     const wtCoffee = path.join(worktree, 'src', 'data', 'coffee.ts');
     const source = await readFile(wtCoffee, 'utf8');
-    const updated = insertEntry(source, formatEntry(entry));
+    const updated = insertEntry(source, shots.map(formatEntry).join('\n'));
     await writeFile(wtCoffee, updated, 'utf8');
 
     // Sanity check: the edited file must still import cleanly.
     await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
-    jlog(job, 'Entry inserted; coffee.ts still parses.');
+    jlog(job, `${shots.length} ${shots.length === 1 ? 'entry' : 'entries'} inserted; coffee.ts still parses.`);
 
-    const msg = commitMessage(entry);
+    const msg = commitMessage(shots);
     await git(['add', 'src/data/coffee.ts'], worktree);
     await git(['commit', '-m', msg], worktree);
     await git(['push', '-u', 'origin', branch], worktree);
@@ -208,7 +216,7 @@ async function runPipeline(job, entry) {
     await git(['branch', '-D', branch]);
     branch = null;
 
-    jlog(job, 'Waiting for Lighthouse checks (mobile + desktop)…');
+    jlog(job, 'Waiting for CI checks…');
     const verdict = await waitForChecks(job, prUrl);
 
     if (verdict === 'pass') {
@@ -248,9 +256,11 @@ async function waitForChecks(job, prUrl) {
       }
     }
     const checks = JSON.parse(raw);
-    const lighthouse = checks.filter((c) => /lighthouse/i.test(c.name));
     if (checks.some((c) => c.bucket === 'fail')) return 'fail';
-    if (lighthouse.length >= 2 && lighthouse.every((c) => c.bucket === 'pass')) return 'pass';
+    // Merge once at least one check exists and none are pending or failing.
+    // Shot PRs skip Lighthouse (paths-ignore), so this is the Pages build.
+    if (checks.length > 0 && checks.every((c) => c.bucket === 'pass' || c.bucket === 'skipping'))
+      return 'pass';
     jlog(
       job,
       `Pending: ${checks.filter((c) => c.bucket === 'pending').map((c) => c.name).join(', ') || 'waiting for checks to appear'}`,
@@ -288,11 +298,16 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && req.url === '/api/log') {
       const body = await readBody(req);
-      const errs = validate(body);
+      const shots = Array.isArray(body.shots) ? body.shots : [body];
+      if (!shots.length) return send(res, 400, { errors: ['no shots submitted'] });
+      const errs = shots.flatMap((s, i) =>
+        validate(s).map((e) => (shots.length > 1 ? `shot ${i + 1}: ${e}` : e)),
+      );
       if (errs.length) return send(res, 400, { errors: errs });
       const { id, job } = newJob();
-      jlog(job, `Logging ${body.date} ${body.bean}: ${body.doseG}g → ${body.yieldG}g in ${body.timeS}s`);
-      runPipeline(job, body); // fire and forget; UI polls
+      for (const s of shots)
+        jlog(job, `Logging ${s.date} ${s.bean}: ${s.doseG}g → ${s.yieldG}g in ${s.timeS}s`);
+      runPipeline(job, shots); // fire and forget; UI polls
       return send(res, 200, { jobId: id });
     }
     send(res, 404, { error: 'not found' });
@@ -328,6 +343,12 @@ const PAGE = /* html */ `<!doctype html>
   button { margin-top: 1.2rem; width: 100%; padding: .6rem; font: inherit; font-weight: 600;
           background: #7a5c3e; color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
   button:disabled { opacity: .5; cursor: default; }
+  button.secondary { background: #3a3028; }
+  #batch { list-style: none; padding: 0; margin: 1rem 0 0; }
+  #batch li { display: flex; justify-content: space-between; gap: .6rem; padding: .35rem .6rem;
+              background: #201a15; border: 1px solid #3a3028; border-radius: 6px; margin-top: .4rem;
+              font: 13px/1.5 ui-monospace, monospace; }
+  #batch a { color: #e77; text-decoration: none; cursor: pointer; }
   #log { margin-top: 1.2rem; padding: .8rem; background: #0d0a08; border-radius: 6px;
          font: 12px/1.6 ui-monospace, monospace; white-space: pre-wrap; display: none; }
   #log a { color: #d8b88a; }
@@ -346,27 +367,23 @@ const PAGE = /* html */ `<!doctype html>
   </div>
   <div class="row">
     <div><label>Grind</label><input id="grind"></div>
-    <div><label>Basket</label><input id="basket"></div>
-    <div><label>Temp</label><input id="temp"></div>
+    <div><label>Basket</label><input id="basket" list="basketList"><datalist id="basketList"></datalist></div>
+    <div><label>Temp</label><input id="temp" list="tempList"><datalist id="tempList"></datalist></div>
   </div>
-  <div class="row2">
-    <div><label>Rating</label>
-      <select id="rating"><option value="">—</option>
-        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-      </select></div>
-    <div><label>Flag</label>
-      <select id="flag"><option value="">none</option>
-        <option value="dial-in">dial-in</option>
-        <option value="process-error">process-error</option>
-        <option value="prep-error">prep-error</option>
-      </select></div>
-  </div>
+  <label>Flag</label>
+  <select id="flag"><option value="">none</option>
+    <option value="dial-in">dial-in</option>
+    <option value="process-error">process-error</option>
+    <option value="prep-error">prep-error</option>
+  </select>
   <label>Notes</label>
   <textarea id="notes" rows="2"></textarea>
   <div class="check"><input id="puckScreen" type="checkbox" checked><label for="puckScreen">Puck screen</label></div>
   <div class="check"><input id="date" type="date" style="width:auto"><label for="date">Brew date</label></div>
-  <button id="go">Log shot → PR → merge</button>
+  <button id="add" type="submit" class="secondary">Add shot to batch</button>
 </form>
+<ul id="batch"></ul>
+<button id="go" disabled>Ship batch → PR → merge</button>
 <div id="log"></div>
 <script>
 let state;
@@ -377,6 +394,8 @@ async function init() {
   $('date').value = state.today;
   $('bag').innerHTML = state.bags.map((b, i) =>
     \`<option value="\${i}">\${b.bean} · \${b.roastDate}\${b.roaster ? ' — ' + b.roaster : ''}</option>\`).join('');
+  $('basketList').innerHTML = state.baskets.map((v) => \`<option value="\${v}">\`).join('');
+  $('tempList').innerHTML = state.temps.map((v) => \`<option value="\${v}">\`).join('');
   $('bag').onchange = fill;
   fill();
 }
@@ -394,25 +413,45 @@ function fill() {
   $('timeS').value = '';
 }
 
-$('f').onsubmit = async (ev) => {
+const batch = [];
+
+function renderBatch() {
+  $('batch').innerHTML = batch.map((s, i) =>
+    \`<li><span>\${s.date} \${s.bean} — \${s.doseG}g → \${s.yieldG}g in \${s.timeS}s\${s.flag ? ' [' + s.flag + ']' : ''}</span><a data-i="\${i}">remove</a></li>\`).join('');
+  document.querySelectorAll('#batch a').forEach((a) => {
+    a.onclick = () => { batch.splice(+a.dataset.i, 1); renderBatch(); };
+  });
+  $('go').disabled = batch.length === 0;
+  $('go').textContent = \`Ship \${batch.length || ''} shot\${batch.length === 1 ? '' : 's'} → PR → merge\`.replace('  ', ' ');
+}
+
+$('f').onsubmit = (ev) => {
   ev.preventDefault();
   const b = state.bags[+$('bag').value];
-  const body = {
+  if (!b) return;
+  batch.push({
     date: $('date').value,
     bean: b.bean, roaster: b.roaster || undefined, roastDate: b.roastDate,
     doseG: +$('doseG').value, yieldG: +$('yieldG').value, timeS: +$('timeS').value,
     grind: $('grind').value || undefined, basket: $('basket').value || undefined,
     temp: $('temp').value || undefined, puckScreen: $('puckScreen').checked,
     method: 'espresso',
-    rating: $('rating').value ? +$('rating').value : undefined,
     notes: $('notes').value || undefined,
     flag: $('flag').value || undefined,
-  };
+  });
+  // Keep dose/grind/basket/temp for the next pull; clear the per-shot fields.
+  $('yieldG').value = ''; $('timeS').value = ''; $('notes').value = ''; $('flag').value = '';
+  renderBatch();
+};
+
+$('go').onclick = async () => {
   const r = await (await fetch('/api/log', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ shots: batch }),
   })).json();
   if (r.errors) { alert(r.errors.join('\\n')); return; }
+  batch.length = 0;
+  renderBatch();
   $('go').disabled = true;
   poll(r.jobId);
 };
@@ -425,7 +464,7 @@ async function poll(id) {
     el.innerHTML = j.log.join('\\n') +
       (j.prUrl ? \`\\n<a href="\${j.prUrl}" target="_blank">\${j.prUrl}</a>\` : '') +
       \`\\n<span class="status-\${j.status}">status: \${j.status}</span>\`;
-    if (j.status !== 'running') { clearInterval(t); $('go').disabled = false; }
+    if (j.status !== 'running') { clearInterval(t); $('go').disabled = batch.length === 0; }
   }, 3000);
 }
 
