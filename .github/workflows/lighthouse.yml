@@ -2,6 +2,11 @@ name: Lighthouse CI
 
 on:
   pull_request:
+    # Data-only and tooling PRs (shot logs) don't need Lighthouse; the
+    # Cloudflare Pages build still gates them.
+    paths-ignore:
+      - 'src/data/coffee.ts'
+      - 'tools/**'
 
 jobs:
   lighthouse:
