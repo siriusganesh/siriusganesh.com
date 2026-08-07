@@ -74,6 +74,7 @@ async function getState() {
   return {
     today: localToday(),
     bags: openBags,
+    grinds: distinct('grind'),
     baskets: distinct('basket'),
     temps: distinct('temp'),
   };
@@ -366,7 +367,7 @@ const PAGE = /* html */ `<!doctype html>
     <div><label>Time s</label><input id="timeS" type="number" step="1" required></div>
   </div>
   <div class="row">
-    <div><label>Grind</label><input id="grind"></div>
+    <div><label>Grind</label><select id="grind"></select></div>
     <div><label>Basket</label><select id="basket"></select></div>
     <div><label>Temp</label><select id="temp"></select></div>
   </div>
@@ -396,6 +397,7 @@ async function init() {
     \`<option value="\${i}">\${b.bean} · \${b.roastDate}\${b.roaster ? ' — ' + b.roaster : ''}</option>\`).join('');
   const opts = (vals) => '<option value="">—</option>' +
     vals.map((v) => \`<option value="\${v}">\${v}</option>\`).join('');
+  $('grind').innerHTML = opts(state.grinds);
   $('basket').innerHTML = opts(state.baskets);
   $('temp').innerHTML = opts(state.temps);
   $('bag').onchange = fill;
