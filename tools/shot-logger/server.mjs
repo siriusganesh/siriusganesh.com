@@ -18,7 +18,7 @@
 import http from 'node:http';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
@@ -35,9 +35,21 @@ const CHECK_TIMEOUT_MS = 25 * 60_000;
 // Data access
 
 async function loadCoffeeData() {
-  // Cache-bust so repeated loads see fresh file contents.
-  const url = pathToFileURL(COFFEE_TS).href + '?t=' + Date.now();
-  return import(url);
+  // Read from origin/main rather than the checkout: after the app merges its
+  // own PRs the checkout is behind, and edit indices must match what is
+  // actually on main. Falls back to the checkout if offline.
+  try {
+    await git(['fetch', 'origin', 'main']);
+    const src = await git(['show', 'origin/main:src/data/coffee.ts']);
+    const tmp = path.join('/tmp', `shot-logger-state-${Date.now()}.ts`);
+    await writeFile(tmp, src, 'utf8');
+    const mod = await import(pathToFileURL(tmp).href);
+    unlink(tmp).catch(() => {});
+    return mod;
+  } catch {
+    const url = pathToFileURL(COFFEE_TS).href + '?t=' + Date.now();
+    return import(url);
+  }
 }
 
 function localToday() {
@@ -79,6 +91,9 @@ async function getState() {
     if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
     return String(a).localeCompare(String(b));
   });
+  // Last 10 shots with their absolute index in brews, for retroactive edits.
+  const first = Math.max(0, brews.length - 10);
+  const recent = brews.slice(first).map((entry, k) => ({ index: first + k, entry }));
   return {
     today: localToday(),
     bags: openBags,
@@ -87,6 +102,7 @@ async function getState() {
     // MaraX V2 has three fixed temp levels; not derived from history so
     // unused levels (Low) are still selectable.
     temps: ['Low', 'Mid', 'High'],
+    recent,
   };
 }
 
@@ -126,6 +142,25 @@ export function insertEntry(source, entryText) {
   const close = source.indexOf('\n];', start);
   if (close === -1) throw new Error('closing ]; of brews not found');
   return source.slice(0, close + 1) + entryText + '\n' + source.slice(close + 1);
+}
+
+/**
+ * Locate every entry object literal inside the brews array as [start, end)
+ * offsets into source. Relies on the machine-written format: entries open
+ * with a line that is exactly "  {" and close with "  },".
+ */
+export function findEntryBlocks(source) {
+  const start = source.indexOf('export const brews');
+  if (start === -1) throw new Error('brews array not found in coffee.ts');
+  const close = source.indexOf('\n];', start);
+  if (close === -1) throw new Error('closing ]; of brews not found');
+  const region = source.slice(start, close);
+  const re = /^  \{\n[\s\S]*?^  \},$/gm;
+  const blocks = [];
+  let m;
+  while ((m = re.exec(region)))
+    blocks.push({ start: start + m.index, end: start + m.index + m[0].length });
+  return blocks;
 }
 
 export function validate(body) {
@@ -171,8 +206,7 @@ async function gh(args, cwd = REPO_ROOT) {
   return stdout.trim();
 }
 
-async function pickBranchName() {
-  const base = `coffee-log-${localToday()}`;
+async function pickBranchName(base = `coffee-log-${localToday()}`) {
   for (let i = 0; i < 10; i++) {
     const name = i === 0 ? base : `${base}-${i + 1}`;
     const remote = await git(['ls-remote', 'origin', `refs/heads/${name}`]);
@@ -209,39 +243,111 @@ async function runPipeline(job, shots) {
     await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
     jlog(job, `${shots.length} ${shots.length === 1 ? 'entry' : 'entries'} inserted; coffee.ts still parses.`);
 
-    const msg = commitMessage(shots);
-    await git(['add', 'src/data/coffee.ts'], worktree);
-    await git(['commit', '-m', msg], worktree);
-    await git(['push', '-u', 'origin', branch], worktree);
-    jlog(job, `Pushed ${branch}.`);
-
-    const prUrl = await gh(
-      ['pr', 'create', '--title', msg, '--body', 'Logged via shot-logger.', '--head', branch],
-      worktree,
-    );
-    job.prUrl = prUrl;
-    jlog(job, `PR opened: ${prUrl}`);
-
-    // Worktree is no longer needed; PR operations go by URL.
-    await git(['worktree', 'remove', '--force', worktree]);
-    await git(['branch', '-D', branch]);
+    await openPrAndMerge(job, worktree, branch, commitMessage(shots));
     branch = null;
-
-    jlog(job, 'Waiting for CI checks…');
-    const verdict = await waitForChecks(job, prUrl);
-
-    if (verdict === 'pass') {
-      await gh(['pr', 'merge', prUrl, '--squash', '--delete-branch']);
-      job.status = 'merged';
-      jlog(job, 'Checks green — squash-merged and deleted branch.');
-    } else {
-      job.status = verdict === 'fail' ? 'checks-failed' : 'timeout';
-      jlog(job, `Not merging (${job.status}). PR left open: ${prUrl}`);
-    }
   } catch (err) {
     job.status = 'error';
     jlog(job, `Error: ${err.message}`);
     // Best-effort cleanup so a failed run doesn't strand a worktree.
+    try {
+      await git(['worktree', 'remove', '--force', worktree]);
+    } catch {}
+    try {
+      if (branch) await git(['branch', '-D', branch]);
+    } catch {}
+  }
+}
+
+// Shared tail of every pipeline: commit the coffee.ts change in the worktree,
+// open a PR, clean up, wait for checks, squash-merge on green.
+async function openPrAndMerge(job, worktree, branch, msg) {
+  await git(['add', 'src/data/coffee.ts'], worktree);
+  await git(['commit', '-m', msg], worktree);
+  await git(['push', '-u', 'origin', branch], worktree);
+  jlog(job, `Pushed ${branch}.`);
+
+  const prUrl = await gh(
+    ['pr', 'create', '--title', msg, '--body', 'Logged via shot-logger.', '--head', branch],
+    worktree,
+  );
+  job.prUrl = prUrl;
+  jlog(job, `PR opened: ${prUrl}`);
+
+  // Worktree is no longer needed; PR operations go by URL.
+  await git(['worktree', 'remove', '--force', worktree]);
+  await git(['branch', '-D', branch]);
+
+  jlog(job, 'Waiting for CI checks…');
+  const verdict = await waitForChecks(job, prUrl);
+
+  if (verdict === 'pass') {
+    await gh(['pr', 'merge', prUrl, '--squash', '--delete-branch']);
+    job.status = 'merged';
+    jlog(job, 'Checks green — squash-merged and deleted branch.');
+  } else {
+    job.status = verdict === 'fail' ? 'checks-failed' : 'timeout';
+    jlog(job, `Not merging (${job.status}). PR left open: ${prUrl}`);
+  }
+}
+
+/**
+ * Retroactive correction of one existing shot. `fields` is the full set of
+ * form values; null means "clear this optional field". `expect` carries the
+ * original date/dose/yield/time so we abort if the entry at `index` is not
+ * the one the user was looking at.
+ */
+async function runEditPipeline(job, index, fields, expect) {
+  const worktree = path.join('/tmp', 'shot-logger', `wt-${Date.now()}`);
+  let branch = null;
+  try {
+    jlog(job, 'Fetching origin/main…');
+    await git(['fetch', 'origin', 'main']);
+
+    branch = await pickBranchName(`coffee-correct-${localToday()}`);
+    jlog(job, `Creating worktree on ${branch}…`);
+    await git(['worktree', 'add', '-b', branch, worktree, 'origin/main']);
+
+    const wtCoffee = path.join(worktree, 'src', 'data', 'coffee.ts');
+    const source = await readFile(wtCoffee, 'utf8');
+    const mod = await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
+    if (index < 0 || index >= mod.brews.length) throw new Error('entry index out of range');
+    const orig = mod.brews[index];
+    if (
+      orig.date !== expect.date || orig.doseG !== expect.doseG ||
+      orig.yieldG !== expect.yieldG || orig.timeS !== expect.timeS
+    )
+      throw new Error('entry changed on main since page load — reload and retry');
+
+    const merged = { ...orig };
+    for (const [k, v] of Object.entries(fields)) {
+      if (v === null) delete merged[k];
+      else if (v !== undefined) merged[k] = v;
+    }
+
+    const blocks = findEntryBlocks(source);
+    if (blocks.length !== mod.brews.length)
+      throw new Error('entry block count mismatch — edit via chat instead');
+    const b = blocks[index];
+    if (source.slice(b.start, b.end).includes('//'))
+      throw new Error('entry contains comments — edit via chat so they are preserved');
+
+    const updated = source.slice(0, b.start) + formatEntry(merged) + source.slice(b.end);
+    await writeFile(wtCoffee, updated, 'utf8');
+
+    // The edited file must import cleanly, keep its length, and show the fix.
+    const check = await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
+    if (check.brews.length !== mod.brews.length) throw new Error('edit changed entry count');
+    const now = check.brews[index];
+    if (now.yieldG !== merged.yieldG || now.timeS !== merged.timeS || now.doseG !== merged.doseG)
+      throw new Error('verification failed — edited entry does not match');
+    jlog(job, 'Entry corrected; coffee.ts verified.');
+
+    const [, m, d] = merged.date.split('-').map(Number);
+    await openPrAndMerge(job, worktree, branch, `coffee: correct ${m}/${d} ${merged.bean} shot`);
+    branch = null;
+  } catch (err) {
+    job.status = 'error';
+    jlog(job, `Error: ${err.message}`);
     try {
       await git(['worktree', 'remove', '--force', worktree]);
     } catch {}
@@ -321,6 +427,17 @@ const server = http.createServer(async (req, res) => {
       runPipeline(job, shots); // fire and forget; UI polls
       return send(res, 200, { jobId: id });
     }
+    if (req.method === 'POST' && req.url === '/api/edit') {
+      const { index, entry, expect } = await readBody(req);
+      if (!Number.isInteger(index) || index < 0 || !expect)
+        return send(res, 400, { errors: ['bad edit request'] });
+      const errs = validate(entry);
+      if (errs.length) return send(res, 400, { errors: errs });
+      const { id, job } = newJob();
+      jlog(job, `Correcting ${entry.date} ${entry.bean}: ${entry.doseG}g → ${entry.yieldG}g in ${entry.timeS}s`);
+      runEditPipeline(job, index, entry, expect); // fire and forget; UI polls
+      return send(res, 200, { jobId: id });
+    }
     send(res, 404, { error: 'not found' });
   } catch (err) {
     send(res, 500, { error: err.message });
@@ -337,37 +454,50 @@ const PAGE = /* html */ `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shot logger</title>
 <style>
-  :root { color-scheme: dark; }
-  body { font: 15px/1.5 -apple-system, system-ui, sans-serif; background: #14100d;
-         color: #e8e0d8; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
-  h1 { font-size: 1.2rem; letter-spacing: .02em; }
-  label { display: block; margin-top: .8rem; font-size: .8rem; color: #b8a898;
+  /* Palette and type from src/styles/global.css (the /coffee page theme). */
+  :root { color-scheme: light; }
+  body { font: 15px/1.6 Verdana, Geneva, "DejaVu Sans", sans-serif; background: #ffffff;
+         color: #111113; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.15rem; color: #303130; }
+  h1 .accent { color: #990000; }
+  h2 { font-size: .9rem; color: #303130; margin-top: 2.2rem; }
+  label { display: block; margin-top: .8rem; font-size: .7rem; color: #717270;
           text-transform: uppercase; letter-spacing: .06em; }
   input, select, textarea { width: 100%; box-sizing: border-box; margin-top: .25rem;
-          padding: .45rem .6rem; background: #201a15; color: #e8e0d8;
-          border: 1px solid #3a3028; border-radius: 6px; font: inherit; }
+          padding: .45rem .6rem; background: #f7f7f4; color: #111113;
+          border: 1px solid #e4e4df; border-radius: 4px;
+          font: 14px/1.5 "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid #dbe3f5; border-color: #91928f; }
   .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .8rem; }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
   .check { display: flex; align-items: center; gap: .5rem; margin-top: 1rem; }
   .check input { width: auto; margin: 0; }
-  .check label { margin: 0; text-transform: none; letter-spacing: 0; font-size: .95rem; color: #e8e0d8; }
-  button { margin-top: 1.2rem; width: 100%; padding: .6rem; font: inherit; font-weight: 600;
-          background: #7a5c3e; color: #fff; border: 0; border-radius: 6px; cursor: pointer; }
-  button:disabled { opacity: .5; cursor: default; }
-  button.secondary { background: #3a3028; }
-  #batch { list-style: none; padding: 0; margin: 1rem 0 0; }
-  #batch li { display: flex; justify-content: space-between; gap: .6rem; padding: .35rem .6rem;
-              background: #201a15; border: 1px solid #3a3028; border-radius: 6px; margin-top: .4rem;
-              font: 13px/1.5 ui-monospace, monospace; }
-  #batch a { color: #e77; text-decoration: none; cursor: pointer; }
-  #log { margin-top: 1.2rem; padding: .8rem; background: #0d0a08; border-radius: 6px;
-         font: 12px/1.6 ui-monospace, monospace; white-space: pre-wrap; display: none; }
-  #log a { color: #d8b88a; }
-  .status-merged { color: #9c6; } .status-error, .status-checks-failed { color: #e77; }
+  .check label { margin: 0; text-transform: none; letter-spacing: 0; font-size: .9rem; color: #111113; }
+  button { margin-top: 1.2rem; width: 100%; padding: .6rem; font: inherit; font-weight: 700;
+          background: #011f5b; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+  button:hover:not(:disabled) { background: #001541; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.secondary { background: #dbe3f5; color: #011f5b; }
+  button.secondary:hover:not(:disabled) { background: #c9d5ef; }
+  #editing { margin-top: 1rem; padding: .5rem .7rem; background: #fbe5e5; border: 1px solid #990000;
+             border-radius: 4px; font-size: .85rem; }
+  #editing a { color: #990000; cursor: pointer; text-decoration: underline; }
+  #batch, #recent { list-style: none; padding: 0; margin: 1rem 0 0; }
+  #batch li, #recent li { display: flex; justify-content: space-between; gap: .6rem; padding: .35rem .6rem;
+              background: #f7f7f4; border: 1px solid #e4e4df; border-radius: 4px; margin-top: .4rem;
+              font: 12.5px/1.5 "IBM Plex Mono", ui-monospace, monospace; }
+  #batch a { color: #990000; text-decoration: none; cursor: pointer; }
+  #recent a { color: #011f5b; text-decoration: none; cursor: pointer; }
+  #log { margin-top: 1.2rem; padding: .8rem; background: #f7f7f4; border: 1px solid #e4e4df;
+         border-radius: 4px; color: #616160;
+         font: 12px/1.6 "IBM Plex Mono", ui-monospace, monospace; white-space: pre-wrap; display: none; }
+  #log a { color: #011f5b; }
+  .status-merged { color: #011f5b; font-weight: 700; }
+  .status-error, .status-checks-failed { color: #990000; font-weight: 700; }
 </style>
 </head>
 <body>
-<h1>Shot logger</h1>
+<h1>Shot logger<span class="accent">.</span></h1>
+<div id="editing" hidden>Editing <span id="editWhat"></span> — <a id="cancelEdit">cancel</a></div>
 <form id="f">
   <label>Bag</label>
   <select id="bag"></select>
@@ -395,6 +525,8 @@ const PAGE = /* html */ `<!doctype html>
 </form>
 <ul id="batch"></ul>
 <button id="go" disabled>Ship batch → PR → merge</button>
+<h2>Recent shots</h2>
+<ul id="recent"></ul>
 <div id="log"></div>
 <script>
 let state;
@@ -411,6 +543,46 @@ async function init() {
   $('basket').innerHTML = opts(state.baskets);
   $('temp').innerHTML = opts(state.temps);
   $('bag').onchange = fill;
+  renderRecent();
+  if (!editing) fill();
+}
+
+function shotLine(e) {
+  return \`\${e.date} \${e.bean} — \${e.doseG}g → \${e.yieldG}g in \${e.timeS}s\${e.flag ? ' [' + e.flag + ']' : ''}\`;
+}
+
+function renderRecent() {
+  $('recent').innerHTML = [...state.recent].reverse().map((r) =>
+    \`<li><span>\${shotLine(r.entry)}</span><a data-i="\${r.index}">edit</a></li>\`).join('');
+  document.querySelectorAll('#recent a').forEach((a) => {
+    a.onclick = () => startEdit(+a.dataset.i);
+  });
+}
+
+let editing = null; // { index, entry } while correcting a past shot
+
+function startEdit(index) {
+  const r = state.recent.find((x) => x.index === index);
+  if (!r) return;
+  editing = r;
+  const e = r.entry;
+  $('date').value = e.date;
+  $('doseG').value = e.doseG; $('yieldG').value = e.yieldG; $('timeS').value = e.timeS;
+  $('grind').value = e.grind || ''; $('basket').value = e.basket || ''; $('temp').value = e.temp || '';
+  $('puckScreen').checked = !!e.puckScreen;
+  $('notes').value = e.notes || ''; $('flag').value = e.flag || '';
+  $('editWhat').textContent = shotLine(e);
+  $('editing').hidden = false;
+  $('bag').disabled = true; // bean identity stays with the original entry
+  $('add').textContent = 'Save correction → PR → merge';
+}
+
+function endEdit() {
+  editing = null;
+  $('editing').hidden = true;
+  $('bag').disabled = false;
+  $('add').textContent = 'Add shot to batch';
+  $('notes').value = ''; $('flag').value = '';
   fill();
 }
 
@@ -439,8 +611,28 @@ function renderBatch() {
   $('go').textContent = \`Ship \${batch.length || ''} shot\${batch.length === 1 ? '' : 's'} → PR → merge\`.replace('  ', ' ');
 }
 
-$('f').onsubmit = (ev) => {
+$('f').onsubmit = async (ev) => {
   ev.preventDefault();
+  if (editing) {
+    const e = editing.entry;
+    const entry = {
+      date: $('date').value,
+      bean: e.bean, roaster: e.roaster ?? null, roastDate: e.roastDate,
+      doseG: +$('doseG').value, yieldG: +$('yieldG').value, timeS: +$('timeS').value,
+      grind: $('grind').value || null, basket: $('basket').value || null,
+      temp: $('temp').value || null, puckScreen: $('puckScreen').checked,
+      notes: $('notes').value || null, flag: $('flag').value || null,
+    };
+    const expect = { date: e.date, doseG: e.doseG, yieldG: e.yieldG, timeS: e.timeS };
+    const r = await (await fetch('/api/edit', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ index: editing.index, entry, expect }),
+    })).json();
+    if (r.errors) { alert(r.errors.join('\\n')); return; }
+    endEdit();
+    poll(r.jobId);
+    return;
+  }
   const b = state.bags[+$('bag').value];
   if (!b) return;
   batch.push({
@@ -478,10 +670,15 @@ async function poll(id) {
     el.innerHTML = j.log.join('\\n') +
       (j.prUrl ? \`\\n<a href="\${j.prUrl}" target="_blank">\${j.prUrl}</a>\` : '') +
       \`\\n<span class="status-\${j.status}">status: \${j.status}</span>\`;
-    if (j.status !== 'running') { clearInterval(t); $('go').disabled = batch.length === 0; }
+    if (j.status !== 'running') {
+      clearInterval(t);
+      $('go').disabled = batch.length === 0;
+      init(); // refresh state so recent shots reflect the merge
+    }
   }, 3000);
 }
 
+$('cancelEdit').onclick = endEdit;
 init();
 </script>
 </body>
