@@ -2,7 +2,8 @@
 
 Local web app that logs espresso shots to `src/data/coffee.ts` and ships them
 without a chat session: feature branch → push → PR → wait for Lighthouse
-checks → squash-merge.
+checks → squash-merge. Shots queue into a batch and ship together as one
+commit/PR; basket and temp fields offer prior values from the log history.
 
 ```
 node tools/shot-logger/server.mjs
