@@ -367,8 +367,8 @@ const PAGE = /* html */ `<!doctype html>
   </div>
   <div class="row">
     <div><label>Grind</label><input id="grind"></div>
-    <div><label>Basket</label><input id="basket" list="basketList"><datalist id="basketList"></datalist></div>
-    <div><label>Temp</label><input id="temp" list="tempList"><datalist id="tempList"></datalist></div>
+    <div><label>Basket</label><select id="basket"></select></div>
+    <div><label>Temp</label><select id="temp"></select></div>
   </div>
   <label>Flag</label>
   <select id="flag"><option value="">none</option>
@@ -394,8 +394,10 @@ async function init() {
   $('date').value = state.today;
   $('bag').innerHTML = state.bags.map((b, i) =>
     \`<option value="\${i}">\${b.bean} · \${b.roastDate}\${b.roaster ? ' — ' + b.roaster : ''}</option>\`).join('');
-  $('basketList').innerHTML = state.baskets.map((v) => \`<option value="\${v}">\`).join('');
-  $('tempList').innerHTML = state.temps.map((v) => \`<option value="\${v}">\`).join('');
+  const opts = (vals) => '<option value="">—</option>' +
+    vals.map((v) => \`<option value="\${v}">\${v}</option>\`).join('');
+  $('basket').innerHTML = opts(state.baskets);
+  $('temp').innerHTML = opts(state.temps);
   $('bag').onchange = fill;
   fill();
 }
