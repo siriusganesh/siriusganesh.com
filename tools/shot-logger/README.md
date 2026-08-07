@@ -29,6 +29,14 @@ Requires Node ≥ 22.6 and an authenticated `gh`. Binds to localhost only.
   wastes ~8 runner-minutes), so the gate is the Cloudflare Pages build,
   which still fails on a broken site. A failed or timed-out check leaves
   the PR open for manual review instead of merging.
+- **Retroactive edits, no deletes.** The last 10 shots can be corrected from
+  the UI (one PR per correction, verified by re-importing the file and
+  comparing the entry). Deleting shots is deliberately unsupported — bad
+  shots get a `flag` and stay visible, per the chart's design. Entries
+  containing comments refuse app edits so comments are never destroyed.
+- **State reads from origin/main, not the checkout.** The app merges its own
+  PRs, so the local checkout lags; bag defaults and edit indices must track
+  what is actually deployed.
 - **Bags are read-only.** Opening, closing, and adding bags needs judgment
   (chart colors sampled from packaging, badge metadata), so that stays a
   chat task.
