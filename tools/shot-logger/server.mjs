@@ -76,7 +76,9 @@ async function getState() {
     bags: openBags,
     grinds: distinct('grind'),
     baskets: distinct('basket'),
-    temps: distinct('temp'),
+    // MaraX V2 has three fixed temp levels; not derived from history so
+    // unused levels (Low) are still selectable.
+    temps: ['Low', 'Mid', 'High'],
   };
 }
 
