@@ -71,10 +71,18 @@ async function getState() {
       };
     });
   const distinct = (key) => [...new Set(brews.map((e) => e[key]).filter(Boolean))];
+  // Sort grind settings by their numeric part ("DF64 #6.5" → 6.5) so the
+  // dropdown reads finest to coarsest instead of first-seen order.
+  const grindNum = (s) => parseFloat(String(s).match(/[\d.]+(?!.*[\d.])/)?.[0] ?? '');
+  const grinds = distinct('grind').sort((a, b) => {
+    const na = grindNum(a), nb = grindNum(b);
+    if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+    return String(a).localeCompare(String(b));
+  });
   return {
     today: localToday(),
     bags: openBags,
-    grinds: distinct('grind'),
+    grinds,
     baskets: distinct('basket'),
     // MaraX V2 has three fixed temp levels; not derived from history so
     // unused levels (Low) are still selectable.
