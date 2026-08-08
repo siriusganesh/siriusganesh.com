@@ -110,7 +110,10 @@ async function getState() {
 // Entry formatting + insertion
 
 export function tsString(s) {
-  return `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+  return `'${String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r\n|\r|\n/g, '\\n')}'`; // multi-line notes must not break the literal
 }
 
 export function formatEntry(e) {
@@ -650,12 +653,15 @@ $('f').onsubmit = async (ev) => {
   renderBatch();
 };
 
+let lastShipped = null; // restored into the batch if the job errors
+
 $('go').onclick = async () => {
   const r = await (await fetch('/api/log', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ shots: batch }),
   })).json();
   if (r.errors) { alert(r.errors.join('\\n')); return; }
+  lastShipped = batch.slice();
   batch.length = 0;
   renderBatch();
   $('go').disabled = true;
@@ -672,6 +678,12 @@ async function poll(id) {
       \`\\n<span class="status-\${j.status}">status: \${j.status}</span>\`;
     if (j.status !== 'running') {
       clearInterval(t);
+      if (j.status === 'error' && lastShipped) {
+        // Nothing was committed; put the shots back so they aren't lost.
+        batch.push(...lastShipped);
+      }
+      lastShipped = null;
+      renderBatch();
       $('go').disabled = batch.length === 0;
       init(); // refresh state so recent shots reflect the merge
     }
