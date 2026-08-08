@@ -3224,7 +3224,7 @@ export const brews: BrewEntry[] = [
     roastDate: '2026-07-28',
     doseG: 15,
     yieldG: 31.1,
-    timeS: 27,
+    timeS: 23,
     grind: 'DF64 #7',
     basket: 'DEX 15g',
     temp: 'Low',
