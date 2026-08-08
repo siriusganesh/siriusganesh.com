@@ -219,34 +219,84 @@ async function pickBranchName(base = `coffee-log-${localToday()}`) {
   throw new Error('could not find a free branch name');
 }
 
-function commitMessage(shots) {
-  const [, m, d] = shots[0].date.split('-').map(Number);
-  const beans = [...new Set(shots.map((s) => s.bean))];
-  const what = beans.length === 1 ? `${beans[0]} shot${shots.length > 1 ? 's' : ''}` : 'shots';
-  return `coffee: log ${m}/${d} ${what}`;
+function commitMessage(shots, edits = []) {
+  const parts = [];
+  if (shots.length) {
+    const [, m, d] = shots[0].date.split('-').map(Number);
+    const beans = [...new Set(shots.map((s) => s.bean))];
+    const what = beans.length === 1 ? `${beans[0]} shot${shots.length > 1 ? 's' : ''}` : 'shots';
+    parts.push(`log ${m}/${d} ${what}`);
+  }
+  if (edits.length === 1) {
+    const e = edits[0].entry;
+    const [, m, d] = e.date.split('-').map(Number);
+    parts.push(`correct ${m}/${d} ${e.bean} shot`);
+  } else if (edits.length > 1) {
+    parts.push(`correct ${edits.length} shots`);
+  }
+  return `coffee: ${parts.join('; ')}`;
 }
 
-async function runPipeline(job, shots) {
+async function runPipeline(job, shots, edits = []) {
   const worktree = path.join('/tmp', 'shot-logger', `wt-${Date.now()}`);
   let branch = null;
   try {
     jlog(job, 'Fetching origin/main…');
     await git(['fetch', 'origin', 'main']);
 
-    branch = await pickBranchName();
+    branch = await pickBranchName(
+      shots.length ? undefined : `coffee-correct-${localToday()}`,
+    );
     jlog(job, `Creating worktree on ${branch}…`);
     await git(['worktree', 'add', '-b', branch, worktree, 'origin/main']);
 
     const wtCoffee = path.join(worktree, 'src', 'data', 'coffee.ts');
-    const source = await readFile(wtCoffee, 'utf8');
-    const updated = insertEntry(source, shots.map(formatEntry).join('\n'));
-    await writeFile(wtCoffee, updated, 'utf8');
+    let source = await readFile(wtCoffee, 'utf8');
+    const mod = await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
 
-    // Sanity check: the edited file must still import cleanly.
-    await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
-    jlog(job, `${shots.length} ${shots.length === 1 ? 'entry' : 'entries'} inserted; coffee.ts still parses.`);
+    // Apply corrections first (in-place block replacement, count unchanged).
+    for (const ed of edits) {
+      if (!Number.isInteger(ed.index) || ed.index < 0 || ed.index >= mod.brews.length)
+        throw new Error('entry index out of range');
+      const orig = mod.brews[ed.index];
+      if (
+        orig.date !== ed.expect.date || orig.doseG !== ed.expect.doseG ||
+        orig.yieldG !== ed.expect.yieldG || orig.timeS !== ed.expect.timeS
+      )
+        throw new Error('entry changed on main since page load — reload and retry');
 
-    await openPrAndMerge(job, worktree, branch, commitMessage(shots));
+      const merged = { ...orig };
+      for (const [k, v] of Object.entries(ed.entry)) {
+        if (v === null) delete merged[k];
+        else if (v !== undefined) merged[k] = v;
+      }
+
+      const blocks = findEntryBlocks(source);
+      if (blocks.length !== mod.brews.length)
+        throw new Error('entry block count mismatch — edit via chat instead');
+      const b = blocks[ed.index];
+      if (source.slice(b.start, b.end).includes('//'))
+        throw new Error('entry contains comments — edit via chat so they are preserved');
+      source = source.slice(0, b.start) + formatEntry(merged) + source.slice(b.end);
+      ed.merged = merged;
+    }
+
+    if (shots.length) source = insertEntry(source, shots.map(formatEntry).join('\n'));
+    await writeFile(wtCoffee, source, 'utf8');
+
+    // The edited file must import cleanly, have the right count, and show
+    // every correction.
+    const check = await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
+    if (check.brews.length !== mod.brews.length + shots.length)
+      throw new Error('entry count mismatch after write');
+    for (const ed of edits) {
+      const now = check.brews[ed.index];
+      if (now.yieldG !== ed.merged.yieldG || now.timeS !== ed.merged.timeS || now.doseG !== ed.merged.doseG)
+        throw new Error('verification failed — corrected entry does not match');
+    }
+    jlog(job, `${shots.length} added, ${edits.length} corrected; coffee.ts verified.`);
+
+    await openPrAndMerge(job, worktree, branch, commitMessage(shots, edits));
     branch = null;
   } catch (err) {
     job.status = 'error';
@@ -290,73 +340,6 @@ async function openPrAndMerge(job, worktree, branch, msg) {
   } else {
     job.status = verdict === 'fail' ? 'checks-failed' : 'timeout';
     jlog(job, `Not merging (${job.status}). PR left open: ${prUrl}`);
-  }
-}
-
-/**
- * Retroactive correction of one existing shot. `fields` is the full set of
- * form values; null means "clear this optional field". `expect` carries the
- * original date/dose/yield/time so we abort if the entry at `index` is not
- * the one the user was looking at.
- */
-async function runEditPipeline(job, index, fields, expect) {
-  const worktree = path.join('/tmp', 'shot-logger', `wt-${Date.now()}`);
-  let branch = null;
-  try {
-    jlog(job, 'Fetching origin/main…');
-    await git(['fetch', 'origin', 'main']);
-
-    branch = await pickBranchName(`coffee-correct-${localToday()}`);
-    jlog(job, `Creating worktree on ${branch}…`);
-    await git(['worktree', 'add', '-b', branch, worktree, 'origin/main']);
-
-    const wtCoffee = path.join(worktree, 'src', 'data', 'coffee.ts');
-    const source = await readFile(wtCoffee, 'utf8');
-    const mod = await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
-    if (index < 0 || index >= mod.brews.length) throw new Error('entry index out of range');
-    const orig = mod.brews[index];
-    if (
-      orig.date !== expect.date || orig.doseG !== expect.doseG ||
-      orig.yieldG !== expect.yieldG || orig.timeS !== expect.timeS
-    )
-      throw new Error('entry changed on main since page load — reload and retry');
-
-    const merged = { ...orig };
-    for (const [k, v] of Object.entries(fields)) {
-      if (v === null) delete merged[k];
-      else if (v !== undefined) merged[k] = v;
-    }
-
-    const blocks = findEntryBlocks(source);
-    if (blocks.length !== mod.brews.length)
-      throw new Error('entry block count mismatch — edit via chat instead');
-    const b = blocks[index];
-    if (source.slice(b.start, b.end).includes('//'))
-      throw new Error('entry contains comments — edit via chat so they are preserved');
-
-    const updated = source.slice(0, b.start) + formatEntry(merged) + source.slice(b.end);
-    await writeFile(wtCoffee, updated, 'utf8');
-
-    // The edited file must import cleanly, keep its length, and show the fix.
-    const check = await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
-    if (check.brews.length !== mod.brews.length) throw new Error('edit changed entry count');
-    const now = check.brews[index];
-    if (now.yieldG !== merged.yieldG || now.timeS !== merged.timeS || now.doseG !== merged.doseG)
-      throw new Error('verification failed — edited entry does not match');
-    jlog(job, 'Entry corrected; coffee.ts verified.');
-
-    const [, m, d] = merged.date.split('-').map(Number);
-    await openPrAndMerge(job, worktree, branch, `coffee: correct ${m}/${d} ${merged.bean} shot`);
-    branch = null;
-  } catch (err) {
-    job.status = 'error';
-    jlog(job, `Error: ${err.message}`);
-    try {
-      await git(['worktree', 'remove', '--force', worktree]);
-    } catch {}
-    try {
-      if (branch) await git(['branch', '-D', branch]);
-    } catch {}
   }
 }
 
@@ -418,27 +401,26 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && req.url === '/api/log') {
       const body = await readBody(req);
-      const shots = Array.isArray(body.shots) ? body.shots : [body];
-      if (!shots.length) return send(res, 400, { errors: ['no shots submitted'] });
-      const errs = shots.flatMap((s, i) =>
-        validate(s).map((e) => (shots.length > 1 ? `shot ${i + 1}: ${e}` : e)),
-      );
+      const shots = Array.isArray(body.shots) ? body.shots : [];
+      const edits = Array.isArray(body.edits) ? body.edits : [];
+      if (!shots.length && !edits.length)
+        return send(res, 400, { errors: ['nothing submitted'] });
+      const errs = [
+        ...shots.flatMap((s, i) => validate(s).map((e) => `shot ${i + 1}: ${e}`)),
+        ...edits.flatMap((ed, i) => {
+          const out = validate(ed.entry ?? {}).map((e) => `correction ${i + 1}: ${e}`);
+          if (!Number.isInteger(ed.index) || ed.index < 0 || !ed.expect)
+            out.push(`correction ${i + 1}: bad index/expect`);
+          return out;
+        }),
+      ];
       if (errs.length) return send(res, 400, { errors: errs });
       const { id, job } = newJob();
       for (const s of shots)
         jlog(job, `Logging ${s.date} ${s.bean}: ${s.doseG}g → ${s.yieldG}g in ${s.timeS}s`);
-      runPipeline(job, shots); // fire and forget; UI polls
-      return send(res, 200, { jobId: id });
-    }
-    if (req.method === 'POST' && req.url === '/api/edit') {
-      const { index, entry, expect } = await readBody(req);
-      if (!Number.isInteger(index) || index < 0 || !expect)
-        return send(res, 400, { errors: ['bad edit request'] });
-      const errs = validate(entry);
-      if (errs.length) return send(res, 400, { errors: errs });
-      const { id, job } = newJob();
-      jlog(job, `Correcting ${entry.date} ${entry.bean}: ${entry.doseG}g → ${entry.yieldG}g in ${entry.timeS}s`);
-      runEditPipeline(job, index, entry, expect); // fire and forget; UI polls
+      for (const ed of edits)
+        jlog(job, `Correcting ${ed.entry.date} ${ed.entry.bean}: ${ed.entry.doseG}g → ${ed.entry.yieldG}g in ${ed.entry.timeS}s`);
+      runPipeline(job, shots, edits); // fire and forget; UI polls
       return send(res, 200, { jobId: id });
     }
     send(res, 404, { error: 'not found' });
@@ -577,7 +559,7 @@ function startEdit(index) {
   $('editWhat').textContent = shotLine(e);
   $('editing').hidden = false;
   $('bag').disabled = true; // bean identity stays with the original entry
-  $('add').textContent = 'Save correction → PR → merge';
+  $('add').textContent = 'Add correction to batch';
 }
 
 function endEdit() {
@@ -605,16 +587,17 @@ function fill() {
 const batch = [];
 
 function renderBatch() {
-  $('batch').innerHTML = batch.map((s, i) =>
-    \`<li><span>\${s.date} \${s.bean} — \${s.doseG}g → \${s.yieldG}g in \${s.timeS}s\${s.flag ? ' [' + s.flag + ']' : ''}</span><a data-i="\${i}">remove</a></li>\`).join('');
+  $('batch').innerHTML = batch.map((it, i) =>
+    \`<li><span>\${it.kind === 'edit' ? 'fix: ' : ''}\${shotLine(it.entry)}</span><a data-i="\${i}">remove</a></li>\`).join('');
   document.querySelectorAll('#batch a').forEach((a) => {
     a.onclick = () => { batch.splice(+a.dataset.i, 1); renderBatch(); };
   });
   $('go').disabled = batch.length === 0;
-  $('go').textContent = \`Ship \${batch.length || ''} shot\${batch.length === 1 ? '' : 's'} → PR → merge\`.replace('  ', ' ');
+  const noun = batch.some((it) => it.kind === 'edit') ? 'change' : 'shot';
+  $('go').textContent = \`Ship \${batch.length || ''} \${noun}\${batch.length === 1 ? '' : 's'} → PR → merge\`.replace('  ', ' ');
 }
 
-$('f').onsubmit = async (ev) => {
+$('f').onsubmit = (ev) => {
   ev.preventDefault();
   if (editing) {
     const e = editing.entry;
@@ -627,18 +610,14 @@ $('f').onsubmit = async (ev) => {
       notes: $('notes').value || null, flag: $('flag').value || null,
     };
     const expect = { date: e.date, doseG: e.doseG, yieldG: e.yieldG, timeS: e.timeS };
-    const r = await (await fetch('/api/edit', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ index: editing.index, entry, expect }),
-    })).json();
-    if (r.errors) { alert(r.errors.join('\\n')); return; }
+    batch.push({ kind: 'edit', index: editing.index, entry, expect });
     endEdit();
-    poll(r.jobId);
+    renderBatch();
     return;
   }
   const b = state.bags[+$('bag').value];
   if (!b) return;
-  batch.push({
+  batch.push({ kind: 'log', entry: {
     date: $('date').value,
     bean: b.bean, roaster: b.roaster || undefined, roastDate: b.roastDate,
     doseG: +$('doseG').value, yieldG: +$('yieldG').value, timeS: +$('timeS').value,
@@ -647,7 +626,7 @@ $('f').onsubmit = async (ev) => {
     method: 'espresso',
     notes: $('notes').value || undefined,
     flag: $('flag').value || undefined,
-  });
+  } });
   // Keep dose/grind/basket/temp for the next pull; clear the per-shot fields.
   $('yieldG').value = ''; $('timeS').value = ''; $('notes').value = ''; $('flag').value = '';
   renderBatch();
@@ -656,9 +635,14 @@ $('f').onsubmit = async (ev) => {
 let lastShipped = null; // restored into the batch if the job errors
 
 $('go').onclick = async () => {
+  const payload = {
+    shots: batch.filter((it) => it.kind === 'log').map((it) => it.entry),
+    edits: batch.filter((it) => it.kind === 'edit')
+      .map(({ index, entry, expect }) => ({ index, entry, expect })),
+  };
   const r = await (await fetch('/api/log', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ shots: batch }),
+    body: JSON.stringify(payload),
   })).json();
   if (r.errors) { alert(r.errors.join('\\n')); return; }
   lastShipped = batch.slice();
