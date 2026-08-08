@@ -3246,7 +3246,7 @@ export const brews: BrewEntry[] = [
     method: 'espresso',
   },
   {
-    date: '2026-08-07',
+    date: '2026-08-08',
     bean: 'Papua New Guinea',
     roaster: 'La Cosecha',
     roastDate: '2026-07-28',
