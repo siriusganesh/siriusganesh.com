@@ -95,11 +95,18 @@ async function getState() {
   const first = Math.max(0, brews.length - 10);
   const recent = brews.slice(first).map((entry, k) => ({ index: first + k, entry }));
   const bagRef = (b) => ({ bean: b.bean, roaster: b.roaster ?? null, roastDate: b.roastDate });
+  // One row per bean for re-adds: repurchases differ only by roast date, so
+  // offer the latest copy of each bean (freshest metadata) instead of all.
+  const latestByBean = new Map();
+  for (const b of bags) {
+    const cur = latestByBean.get(b.bean);
+    if (!cur || b.roastDate > cur.roastDate) latestByBean.set(b.bean, b);
+  }
   return {
     today: localToday(),
     bags: openBags,
     comingSoon: bags.filter((b) => !b.openedDate && !b.closedDate).map(bagRef),
-    allBags: bags.map(bagRef),
+    rebuyBags: [...latestByBean.values()].map(bagRef),
     grinds,
     baskets: distinct('basket'),
     // MaraX V2 has three fixed temp levels; not derived from history so
@@ -656,7 +663,7 @@ async function init() {
 
 function bagList() {
   const op = $('bagOpSel').value;
-  return op === 'open' ? state.comingSoon : op === 'close' ? state.bags : state.allBags;
+  return op === 'open' ? state.comingSoon : op === 'close' ? state.bags : state.rebuyBags;
 }
 
 function fillBagTargets() {
