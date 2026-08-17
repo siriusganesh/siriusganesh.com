@@ -477,7 +477,9 @@ async function readBody(req) {
 }
 
 function send(res, code, body, type = 'application/json') {
-  res.writeHead(code, { 'Content-Type': type });
+  // no-store: Safari web-app wrappers otherwise cache the page shell and
+  // keep showing stale UI after the app updates.
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
   res.end(type === 'application/json' ? JSON.stringify(body) : body);
 }
 
