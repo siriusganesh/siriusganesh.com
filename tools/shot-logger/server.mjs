@@ -94,9 +94,12 @@ async function getState() {
   // Last 10 shots with their absolute index in brews, for retroactive edits.
   const first = Math.max(0, brews.length - 10);
   const recent = brews.slice(first).map((entry, k) => ({ index: first + k, entry }));
+  const bagRef = (b) => ({ bean: b.bean, roaster: b.roaster ?? null, roastDate: b.roastDate });
   return {
     today: localToday(),
     bags: openBags,
+    comingSoon: bags.filter((b) => !b.openedDate && !b.closedDate).map(bagRef),
+    allBags: bags.map(bagRef),
     grinds,
     baskets: distinct('basket'),
     // MaraX V2 has three fixed temp levels; not derived from history so
@@ -139,12 +142,38 @@ export function formatEntry(e) {
   return lines.join('\n');
 }
 
-export function insertEntry(source, entryText) {
-  const start = source.indexOf('export const brews');
-  if (start === -1) throw new Error('brews array not found in coffee.ts');
+export function insertEntry(source, entryText, anchor = 'export const brews') {
+  const start = source.indexOf(anchor);
+  if (start === -1) throw new Error(`${anchor} not found in coffee.ts`);
   const close = source.indexOf('\n];', start);
-  if (close === -1) throw new Error('closing ]; of brews not found');
+  if (close === -1) throw new Error(`closing ]; after ${anchor} not found`);
   return source.slice(0, close + 1) + entryText + '\n' + source.slice(close + 1);
+}
+
+/** Format a Bag object literal. Field order mirrors the Bag type declaration. */
+export function formatBag(b) {
+  const lines = ['  {'];
+  const push = (k, v) => lines.push(`    ${k}: ${v},`);
+  const arr = (xs) => `[${xs.map(tsString).join(', ')}]`;
+  push('bean', tsString(b.bean));
+  if (b.roaster) push('roaster', tsString(b.roaster));
+  push('roastDate', tsString(b.roastDate));
+  if (b.openedDate) push('openedDate', tsString(b.openedDate));
+  if (b.closedDate) push('closedDate', tsString(b.closedDate));
+  if (b.specialRelease) push('specialRelease', 'true');
+  if (b.type) push('type', tsString(b.type));
+  if (b.process) push('process', tsString(b.process));
+  if (b.roastLevel) push('roastLevel', tsString(b.roastLevel));
+  if (b.origin) push('origin', tsString(b.origin));
+  if (b.tastingNotes?.length) push('tastingNotes', arr(b.tastingNotes));
+  if (b.producer) push('producer', tsString(b.producer));
+  if (b.elevation) push('elevation', tsString(b.elevation));
+  if (b.varieties?.length) push('varieties', arr(b.varieties));
+  if (b.harvest) push('harvest', tsString(b.harvest));
+  if (b.certifications?.length) push('certifications', arr(b.certifications));
+  if (b.chartColor) push('chartColor', tsString(b.chartColor));
+  lines.push('  },');
+  return lines.join('\n');
 }
 
 /**
@@ -152,11 +181,11 @@ export function insertEntry(source, entryText) {
  * offsets into source. Relies on the machine-written format: entries open
  * with a line that is exactly "  {" and close with "  },".
  */
-export function findEntryBlocks(source) {
-  const start = source.indexOf('export const brews');
-  if (start === -1) throw new Error('brews array not found in coffee.ts');
+export function findEntryBlocks(source, anchor = 'export const brews') {
+  const start = source.indexOf(anchor);
+  if (start === -1) throw new Error(`${anchor} not found in coffee.ts`);
   const close = source.indexOf('\n];', start);
-  if (close === -1) throw new Error('closing ]; of brews not found');
+  if (close === -1) throw new Error(`closing ]; after ${anchor} not found`);
   const region = source.slice(start, close);
   const re = /^  \{\n[\s\S]*?^  \},$/gm;
   const blocks = [];
@@ -219,7 +248,7 @@ async function pickBranchName(base = `coffee-log-${localToday()}`) {
   throw new Error('could not find a free branch name');
 }
 
-function commitMessage(shots, edits = []) {
+function commitMessage(shots, edits = [], bagOps = []) {
   const parts = [];
   if (shots.length) {
     const [, m, d] = shots[0].date.split('-').map(Number);
@@ -234,10 +263,18 @@ function commitMessage(shots, edits = []) {
   } else if (edits.length > 1) {
     parts.push(`correct ${edits.length} shots`);
   }
+  for (const op of bagOps) {
+    if (op.op === 'rebuy') {
+      const [, m, d] = op.date.split('-').map(Number);
+      parts.push(`add ${op.bean} bag (${m}/${d} roast)`);
+    } else {
+      parts.push(`${op.op} ${op.bean} bag`);
+    }
+  }
   return `coffee: ${parts.join('; ')}`;
 }
 
-async function runPipeline(job, shots, edits = []) {
+async function runPipeline(job, shots, edits = [], bagOps = []) {
   const worktree = path.join('/tmp', 'shot-logger', `wt-${Date.now()}`);
   let branch = null;
   try {
@@ -245,7 +282,9 @@ async function runPipeline(job, shots, edits = []) {
     await git(['fetch', 'origin', 'main']);
 
     branch = await pickBranchName(
-      shots.length ? undefined : `coffee-correct-${localToday()}`,
+      shots.length ? undefined
+        : edits.length ? `coffee-correct-${localToday()}`
+        : `coffee-bags-${localToday()}`,
     );
     jlog(job, `Creating worktree on ${branch}…`);
     await git(['worktree', 'add', '-b', branch, worktree, 'origin/main']);
@@ -253,6 +292,48 @@ async function runPipeline(job, shots, edits = []) {
     const wtCoffee = path.join(worktree, 'src', 'data', 'coffee.ts');
     let source = await readFile(wtCoffee, 'utf8');
     const mod = await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
+
+    // Bag lifecycle first: open/close are pure line insertions inside the
+    // matching bag block; a re-add copies the parsed bag with a new roast
+    // date and no lifecycle dates (enters as coming soon).
+    for (const op of bagOps) {
+      if (op.op === 'rebuy') {
+        const src = mod.bags.find((b) => b.bean === op.bean && b.roastDate === op.roastDate);
+        if (!src) throw new Error(`bag not found: ${op.bean} · ${op.roastDate}`);
+        if (mod.bags.some((b) => b.bean === op.bean && b.roastDate === op.date))
+          throw new Error(`a ${op.bean} bag with roast date ${op.date} already exists`);
+        const copy = { ...src, roastDate: op.date };
+        delete copy.openedDate;
+        delete copy.closedDate;
+        source = insertEntry(source, formatBag(copy), 'export const bags');
+        continue;
+      }
+      const blocks = findEntryBlocks(source, 'export const bags');
+      const matches = blocks.filter((bl) => {
+        const t = source.slice(bl.start, bl.end);
+        return t.includes(`bean: ${tsString(op.bean)},`) &&
+               t.includes(`roastDate: ${tsString(op.roastDate)},`);
+      });
+      if (matches.length !== 1)
+        throw new Error(`expected exactly one bag block for ${op.bean} · ${op.roastDate}`);
+      const bl = matches[0];
+      const text = source.slice(bl.start, bl.end);
+      if (op.op === 'open') {
+        if (text.includes('openedDate') || text.includes('closedDate'))
+          throw new Error(`${op.bean} · ${op.roastDate} is not a coming-soon bag`);
+        const anchor = `roastDate: ${tsString(op.roastDate)},`;
+        const at = bl.start + text.indexOf(anchor) + anchor.length;
+        source = source.slice(0, at) + `\n    openedDate: ${tsString(op.date)},` + source.slice(at);
+      } else if (op.op === 'close') {
+        const opened = text.match(/openedDate: '[^']*',/);
+        if (!opened || text.includes('closedDate'))
+          throw new Error(`${op.bean} · ${op.roastDate} is not an open bag`);
+        const at = bl.start + text.indexOf(opened[0]) + opened[0].length;
+        source = source.slice(0, at) + `\n    closedDate: ${tsString(op.date)},` + source.slice(at);
+      } else {
+        throw new Error(`unknown bag op: ${op.op}`);
+      }
+    }
 
     // Apply corrections first (in-place block replacement, count unchanged).
     for (const ed of edits) {
@@ -284,19 +365,33 @@ async function runPipeline(job, shots, edits = []) {
     if (shots.length) source = insertEntry(source, shots.map(formatEntry).join('\n'));
     await writeFile(wtCoffee, source, 'utf8');
 
-    // The edited file must import cleanly, have the right count, and show
-    // every correction.
+    // The edited file must import cleanly, have the right counts, and show
+    // every correction and bag change.
     const check = await import(pathToFileURL(wtCoffee).href + '?t=' + Date.now());
     if (check.brews.length !== mod.brews.length + shots.length)
       throw new Error('entry count mismatch after write');
+    const rebuys = bagOps.filter((o) => o.op === 'rebuy').length;
+    if (check.bags.length !== mod.bags.length + rebuys)
+      throw new Error('bag count mismatch after write');
     for (const ed of edits) {
       const now = check.brews[ed.index];
       if (now.yieldG !== ed.merged.yieldG || now.timeS !== ed.merged.timeS || now.doseG !== ed.merged.doseG)
         throw new Error('verification failed — corrected entry does not match');
     }
-    jlog(job, `${shots.length} added, ${edits.length} corrected; coffee.ts verified.`);
+    for (const op of bagOps) {
+      const rd = op.op === 'rebuy' ? op.date : op.roastDate;
+      const bag = check.bags.find((b) => b.bean === op.bean && b.roastDate === rd);
+      if (!bag) throw new Error(`bag verification failed: ${op.bean} · ${rd}`);
+      if (op.op === 'open' && bag.openedDate !== op.date)
+        throw new Error('bag open verification failed');
+      if (op.op === 'close' && bag.closedDate !== op.date)
+        throw new Error('bag close verification failed');
+      if (op.op === 'rebuy' && (bag.openedDate || bag.closedDate))
+        throw new Error('re-added bag should have no lifecycle dates');
+    }
+    jlog(job, `${shots.length} added, ${edits.length} corrected, ${bagOps.length} bag change${bagOps.length === 1 ? '' : 's'}; coffee.ts verified.`);
 
-    await openPrAndMerge(job, worktree, branch, commitMessage(shots, edits));
+    await openPrAndMerge(job, worktree, branch, commitMessage(shots, edits, bagOps));
     branch = null;
   } catch (err) {
     job.status = 'error';
@@ -403,14 +498,24 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const shots = Array.isArray(body.shots) ? body.shots : [];
       const edits = Array.isArray(body.edits) ? body.edits : [];
-      if (!shots.length && !edits.length)
+      const bagOps = Array.isArray(body.bagOps) ? body.bagOps : [];
+      if (!shots.length && !edits.length && !bagOps.length)
         return send(res, 400, { errors: ['nothing submitted'] });
+      const dateRe = /^\d{4}-\d{2}-\d{2}$/;
       const errs = [
         ...shots.flatMap((s, i) => validate(s).map((e) => `shot ${i + 1}: ${e}`)),
         ...edits.flatMap((ed, i) => {
           const out = validate(ed.entry ?? {}).map((e) => `correction ${i + 1}: ${e}`);
           if (!Number.isInteger(ed.index) || ed.index < 0 || !ed.expect)
             out.push(`correction ${i + 1}: bad index/expect`);
+          return out;
+        }),
+        ...bagOps.flatMap((op, i) => {
+          const out = [];
+          if (!['open', 'close', 'rebuy'].includes(op.op)) out.push(`bag change ${i + 1}: bad op`);
+          if (!op.bean) out.push(`bag change ${i + 1}: bean required`);
+          if (!dateRe.test(op.roastDate || '')) out.push(`bag change ${i + 1}: bad roastDate`);
+          if (!dateRe.test(op.date || '')) out.push(`bag change ${i + 1}: bad date`);
           return out;
         }),
       ];
@@ -420,7 +525,9 @@ const server = http.createServer(async (req, res) => {
         jlog(job, `Logging ${s.date} ${s.bean}: ${s.doseG}g → ${s.yieldG}g in ${s.timeS}s`);
       for (const ed of edits)
         jlog(job, `Correcting ${ed.entry.date} ${ed.entry.bean}: ${ed.entry.doseG}g → ${ed.entry.yieldG}g in ${ed.entry.timeS}s`);
-      runPipeline(job, shots, edits); // fire and forget; UI polls
+      for (const op of bagOps)
+        jlog(job, `Bag ${op.op === 'rebuy' ? 'add' : op.op}: ${op.bean} (${op.date})`);
+      runPipeline(job, shots, edits, bagOps); // fire and forget; UI polls
       return send(res, 200, { jobId: id });
     }
     send(res, 404, { error: 'not found' });
@@ -508,6 +615,17 @@ const PAGE = /* html */ `<!doctype html>
   <div class="check"><input id="date" type="date" style="width:auto"><label for="date">Brew date</label></div>
   <button id="add" type="submit" class="secondary">Add shot to batch</button>
 </form>
+<h2>Bags</h2>
+<div class="row">
+  <div><label>Action</label><select id="bagOpSel">
+    <option value="open">open</option>
+    <option value="close">close</option>
+    <option value="rebuy">re-add (new roast)</option>
+  </select></div>
+  <div><label>Bag</label><select id="bagTarget"></select></div>
+  <div><label id="bagDateLabel">Date</label><input id="bagDate" type="date"></div>
+</div>
+<button id="addBag" type="button" class="secondary">Add bag change to batch</button>
 <ul id="batch"></ul>
 <button id="go" disabled>Ship batch → PR → merge</button>
 <h2>Recent shots</h2>
@@ -528,8 +646,21 @@ async function init() {
   $('basket').innerHTML = opts(state.baskets);
   $('temp').innerHTML = opts(state.temps);
   $('bag').onchange = fill;
+  $('bagDate').value = state.today;
+  fillBagTargets();
   renderRecent();
   if (!editing) fill();
+}
+
+function bagList() {
+  const op = $('bagOpSel').value;
+  return op === 'open' ? state.comingSoon : op === 'close' ? state.bags : state.allBags;
+}
+
+function fillBagTargets() {
+  $('bagTarget').innerHTML = bagList().map((b, i) =>
+    \`<option value="\${i}">\${b.bean} · \${b.roastDate}\${b.roaster ? ' — ' + b.roaster : ''}</option>\`).join('');
+  $('bagDateLabel').textContent = $('bagOpSel').value === 'rebuy' ? 'New roast date' : 'Date';
 }
 
 function shotLine(e) {
@@ -586,14 +717,23 @@ function fill() {
 
 const batch = [];
 
+function batchLine(it) {
+  if (it.kind === 'bag') {
+    const verb = it.op === 'rebuy' ? 'add' : it.op;
+    const when = it.op === 'rebuy' ? \`new roast \${it.date}\` : it.date;
+    return \`\${verb} bag: \${it.bean} · \${when}\`;
+  }
+  return \`\${it.kind === 'edit' ? 'fix: ' : ''}\${shotLine(it.entry)}\`;
+}
+
 function renderBatch() {
   $('batch').innerHTML = batch.map((it, i) =>
-    \`<li><span>\${it.kind === 'edit' ? 'fix: ' : ''}\${shotLine(it.entry)}</span><a data-i="\${i}">remove</a></li>\`).join('');
+    \`<li><span>\${batchLine(it)}</span><a data-i="\${i}">remove</a></li>\`).join('');
   document.querySelectorAll('#batch a').forEach((a) => {
     a.onclick = () => { batch.splice(+a.dataset.i, 1); renderBatch(); };
   });
   $('go').disabled = batch.length === 0;
-  const noun = batch.some((it) => it.kind === 'edit') ? 'change' : 'shot';
+  const noun = batch.every((it) => it.kind === 'log') ? 'shot' : 'change';
   $('go').textContent = \`Ship \${batch.length || ''} \${noun}\${batch.length === 1 ? '' : 's'} → PR → merge\`.replace('  ', ' ');
 }
 
@@ -634,11 +774,25 @@ $('f').onsubmit = (ev) => {
 
 let lastShipped = null; // restored into the batch if the job errors
 
+$('bagOpSel').onchange = fillBagTargets;
+
+$('addBag').onclick = () => {
+  const b = bagList()[+$('bagTarget').value];
+  if (!b || !$('bagDate').value) return;
+  batch.push({
+    kind: 'bag', op: $('bagOpSel').value,
+    bean: b.bean, roastDate: b.roastDate, date: $('bagDate').value,
+  });
+  renderBatch();
+};
+
 $('go').onclick = async () => {
   const payload = {
     shots: batch.filter((it) => it.kind === 'log').map((it) => it.entry),
     edits: batch.filter((it) => it.kind === 'edit')
       .map(({ index, entry, expect }) => ({ index, entry, expect })),
+    bagOps: batch.filter((it) => it.kind === 'bag')
+      .map(({ op, bean, roastDate, date }) => ({ op, bean, roastDate, date })),
   };
   const r = await (await fetch('/api/log', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

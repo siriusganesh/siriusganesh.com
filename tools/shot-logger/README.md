@@ -39,6 +39,9 @@ Requires Node ≥ 22.6 and an authenticated `gh`. Binds to localhost only.
 - **State reads from origin/main, not the checkout.** The app merges its own
   PRs, so the local checkout lags; bag defaults and edit indices must track
   what is actually deployed.
-- **Bags are read-only.** Opening, closing, and adding bags needs judgment
-  (chart colors sampled from packaging, badge metadata), so that stays a
-  chat task.
+- **Bag lifecycle, but not new bags.** Opening and closing bags are pure
+  line insertions (openedDate/closedDate) in the matching bag block, and a
+  repurchase re-adds an existing bag with a new roast date, carrying over
+  all metadata and entering as coming soon. Brand-new bags still need
+  judgment (chart color sampled from packaging, badges, tasting notes), so
+  those stay a chat task.
