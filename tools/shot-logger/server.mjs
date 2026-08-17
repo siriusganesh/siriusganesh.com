@@ -95,11 +95,18 @@ async function getState() {
   const first = Math.max(0, brews.length - 10);
   const recent = brews.slice(first).map((entry, k) => ({ index: first + k, entry }));
   const bagRef = (b) => ({ bean: b.bean, roaster: b.roaster ?? null, roastDate: b.roastDate });
+  // One row per bean for re-adds: repurchases differ only by roast date, so
+  // offer the latest copy of each bean (freshest metadata) instead of all.
+  const latestByBean = new Map();
+  for (const b of bags) {
+    const cur = latestByBean.get(b.bean);
+    if (!cur || b.roastDate > cur.roastDate) latestByBean.set(b.bean, b);
+  }
   return {
     today: localToday(),
     bags: openBags,
     comingSoon: bags.filter((b) => !b.openedDate && !b.closedDate).map(bagRef),
-    allBags: bags.map(bagRef),
+    rebuyBags: [...latestByBean.values()].map(bagRef),
     grinds,
     baskets: distinct('basket'),
     // MaraX V2 has three fixed temp levels; not derived from history so
@@ -640,8 +647,7 @@ const $ = (id) => document.getElementById(id);
 async function init() {
   state = await (await fetch('/api/state')).json();
   $('date').value = state.today;
-  $('bag').innerHTML = state.bags.map((b, i) =>
-    \`<option value="\${i}">\${b.bean} · \${b.roastDate}\${b.roaster ? ' — ' + b.roaster : ''}</option>\`).join('');
+  fillShotBagSelect();
   const opts = (vals) => '<option value="">—</option>' +
     vals.map((v) => \`<option value="\${v}">\${v}</option>\`).join('');
   $('grind').innerHTML = opts(state.grinds);
@@ -656,13 +662,36 @@ async function init() {
 
 function bagList() {
   const op = $('bagOpSel').value;
-  return op === 'open' ? state.comingSoon : op === 'close' ? state.bags : state.allBags;
+  return op === 'open' ? state.comingSoon : op === 'close' ? state.bags : state.rebuyBags;
+}
+
+// Open bags plus any bag with an open queued in the batch, so the first
+// shot of a new bag can ship in the same PR as its open.
+function shotBags() {
+  const opens = batch
+    .filter((it) => it.kind === 'bag' && it.op === 'open')
+    .map((it) => ({ bean: it.bean, roaster: it.roaster ?? null, roastDate: it.roastDate,
+                    lastShot: null, pendingOpen: true }));
+  return [...state.bags, ...opens];
+}
+
+function fillShotBagSelect() {
+  const list = shotBags();
+  const selKey = $('bag').selectedOptions[0]?.dataset.key;
+  $('bag').innerHTML = list.map((b, i) =>
+    \`<option value="\${i}" data-key="\${b.bean}|\${b.roastDate}">\${b.bean} · \${b.roastDate}\${b.roaster ? ' — ' + b.roaster : ''}\${b.pendingOpen ? ' (opening)' : ''}</option>\`).join('');
+  const idx = list.findIndex((b) => \`\${b.bean}|\${b.roastDate}\` === selKey);
+  $('bag').value = String(idx >= 0 ? idx : 0);
+  if (idx < 0) fill();
 }
 
 function fillBagTargets() {
+  const rebuy = $('bagOpSel').value === 'rebuy';
+  // Rebuy options omit the source roast date — it belongs to the old bag
+  // and reads like the new one's.
   $('bagTarget').innerHTML = bagList().map((b, i) =>
-    \`<option value="\${i}">\${b.bean} · \${b.roastDate}\${b.roaster ? ' — ' + b.roaster : ''}</option>\`).join('');
-  $('bagDateLabel').textContent = $('bagOpSel').value === 'rebuy' ? 'New roast date' : 'Date';
+    \`<option value="\${i}">\${b.bean}\${rebuy ? '' : ' · ' + b.roastDate}\${b.roaster ? ' — ' + b.roaster : ''}</option>\`).join('');
+  $('bagDateLabel').textContent = rebuy ? 'New roast date' : 'Date';
 }
 
 function shotLine(e) {
@@ -705,7 +734,7 @@ function endEdit() {
 }
 
 function fill() {
-  const b = state.bags[+$('bag').value];
+  const b = shotBags()[+$('bag').value];
   if (!b) return;
   const l = b.lastShot;
   $('doseG').value = l ? l.doseG : '';
@@ -737,6 +766,7 @@ function renderBatch() {
   $('go').disabled = batch.length === 0;
   const noun = batch.every((it) => it.kind === 'log') ? 'shot' : 'change';
   $('go').textContent = \`Ship \${batch.length || ''} \${noun}\${batch.length === 1 ? '' : 's'} → PR → merge\`.replace('  ', ' ');
+  fillShotBagSelect(); // queued opens may have appeared or gone
 }
 
 $('f').onsubmit = (ev) => {
@@ -757,7 +787,7 @@ $('f').onsubmit = (ev) => {
     renderBatch();
     return;
   }
-  const b = state.bags[+$('bag').value];
+  const b = shotBags()[+$('bag').value];
   if (!b) return;
   batch.push({ kind: 'log', entry: {
     date: $('date').value,
@@ -780,15 +810,31 @@ $('bagOpSel').onchange = fillBagTargets;
 
 $('addBag').onclick = () => {
   const b = bagList()[+$('bagTarget').value];
+  const op = $('bagOpSel').value;
   if (!b || !$('bagDate').value) return;
+  // Ignore duplicates: same op on the same bag is already queued.
+  if (batch.some((it) => it.kind === 'bag' && it.op === op &&
+      it.bean === b.bean && it.roastDate === b.roastDate)) return;
   batch.push({
-    kind: 'bag', op: $('bagOpSel').value,
-    bean: b.bean, roastDate: b.roastDate, date: $('bagDate').value,
+    kind: 'bag', op,
+    bean: b.bean, roaster: b.roaster ?? null, roastDate: b.roastDate,
+    date: $('bagDate').value,
   });
   renderBatch();
 };
 
 $('go').onclick = async () => {
+  // A queued shot must belong to a bag that is open or queued to open.
+  const opens = new Set(batch.filter((it) => it.kind === 'bag' && it.op === 'open')
+    .map((it) => it.bean + '|' + it.roastDate));
+  const openNow = new Set(state.bags.map((b) => b.bean + '|' + b.roastDate));
+  const orphan = batch.find((it) => it.kind === 'log' &&
+    !openNow.has(it.entry.bean + '|' + it.entry.roastDate) &&
+    !opens.has(it.entry.bean + '|' + it.entry.roastDate));
+  if (orphan) {
+    alert(\`Shot for \${orphan.entry.bean} needs its bag-open queued in the same batch.\`);
+    return;
+  }
   const payload = {
     shots: batch.filter((it) => it.kind === 'log').map((it) => it.entry),
     edits: batch.filter((it) => it.kind === 'edit')
