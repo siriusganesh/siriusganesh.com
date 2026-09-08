@@ -7,7 +7,7 @@
 
 export const profile = {
   name: "Sirius Ganesh",
-  overline: "Deployment Engineering · Warehouse Robotics · AMR Fleets",
+  overline: "Product Operations · Warehouse Robotics · AMR Fleets",
   location: "Denver, CO",
   email: "siriusganesh@outlook.com",
   linkedin: "https://www.linkedin.com/in/siriusganesh/",
@@ -17,10 +17,12 @@ export const profile = {
 
 // The hero paragraph. Inline HTML allowed.
 export const ledeHtml = `
-  Deployment engineering leader scaling warehouse robotics from
+  Product operations leader scaling warehouse robotics from
   <strong>startup pilot</strong> to <strong>enterprise production</strong>.
-  Currently managing a team of 7 deployment engineers across 9 customer sites at
-  <a href="https://www.picklerobot.com" target="_blank" rel="noreferrer">Pickle Robot</a>,
+  Now leading product operations at
+  <a href="https://www.picklerobot.com" target="_blank" rel="noreferrer">Pickle Robot</a>
+  across deployment, new product introduction, and customer success, with
+  <strong>P&amp;L and unit-economics</strong> ownership,
   after scaling <strong>$40M+</strong> in AMR fleet deployments at Geek+.
   I bridge deep technical ownership — computer vision, fleet systems, networking —
   with the operational discipline to deliver automation programs reliably.
@@ -44,16 +46,24 @@ export type ExperienceEntry = {
 
 export const experience: ExperienceEntry[] = [
   {
-    role: "Manager, Deployment Engineering",
+    role: "Director, Product Operations",
     org: "Pickle Robot Company",
     location: "Denver, CO",
-    when: "JAN 2025 — PRESENT",
+    when: "SEP 2026 — PRESENT",
     image: {
       src: "/images/pickle-banner.webp",
       alt: "Pickle Robot — Physical AI for Supply Chain Automation (gripper)",
       srcset: "/images/pickle-banner-mobile.webp 700w, /images/pickle-banner-1000w.webp 1000w, /images/pickle-banner.webp 1584w",
       sizes: "(max-width: 720px) 400px, 760px",
     },
+    // Bullets pending. index.astro skips the <ul> while this is empty.
+    bulletsHtml: [],
+  },
+  {
+    role: "Manager, Deployment Engineering",
+    org: "Pickle Robot Company",
+    location: "Denver, CO",
+    when: "JAN 2025 — AUG 2026",
     bulletsHtml: [
       "Manage a team of 7 deployment engineers — hiring, performance, and development — across 9 active customer sites running autonomous truck-unloading robots.",
       "Reduced per-site deployment time from 2 weeks to 2 days by standardizing deployment playbooks, networking infrastructure protocols, and customer training programs.",
@@ -202,7 +212,7 @@ export const capabilities: CapabilityGroup[] = [
     items: [
       "Cross-functional team management",
       "Multi-site program ownership",
-      "P&L & deployment economics",
+      "P&L & unit economics",
       "Executive & stakeholder comms",
       "Process standardization",
       "Vendor & partner management",
@@ -329,9 +339,9 @@ export const contactHtml = `
   Best way to reach me is
   <a href="mailto:siriusganesh@outlook.com">siriusganesh@outlook.com</a>.
   For recruiter outreach, <a href="https://www.linkedin.com/in/siriusganesh/" target="_blank" rel="noreferrer">LinkedIn</a>
-  is fine. Open to conversations about <strong>director-level deployment, field
-  engineering, and robotics operations</strong> — especially at companies scaling
-  from pilot to production.
+  is fine. Always up for conversations about <strong>scaling field operations,
+  new product introduction, and customer success in robotics</strong>, especially
+  at companies moving from pilot to production.
   <br /><br />
   <a href="/Resume_SG.pdf" target="_blank" rel="noreferrer">Download resume (PDF) ↗</a>
 `;
