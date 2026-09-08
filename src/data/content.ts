@@ -7,7 +7,7 @@
 
 export const profile = {
   name: "Sirius Ganesh",
-  overline: "Deployment Engineering · Warehouse Robotics · AMR Fleets",
+  overline: "Product Operations · Warehouse Robotics · AMR Fleets",
   location: "Denver, CO",
   email: "siriusganesh@outlook.com",
   linkedin: "https://www.linkedin.com/in/siriusganesh/",
@@ -17,7 +17,7 @@ export const profile = {
 
 // The hero paragraph. Inline HTML allowed.
 export const ledeHtml = `
-  Deployment engineering leader scaling warehouse robotics from
+  Product operations leader scaling warehouse robotics from
   <strong>startup pilot</strong> to <strong>enterprise production</strong>.
   Currently managing a team of 7 deployment engineers across 9 customer sites at
   <a href="https://www.picklerobot.com" target="_blank" rel="noreferrer">Pickle Robot</a>,
@@ -329,9 +329,9 @@ export const contactHtml = `
   Best way to reach me is
   <a href="mailto:siriusganesh@outlook.com">siriusganesh@outlook.com</a>.
   For recruiter outreach, <a href="https://www.linkedin.com/in/siriusganesh/" target="_blank" rel="noreferrer">LinkedIn</a>
-  is fine. Open to conversations about <strong>director-level deployment, field
-  engineering, and robotics operations</strong> — especially at companies scaling
-  from pilot to production.
+  is fine. Always up for conversations about <strong>scaling field operations,
+  new product introduction, and customer success in robotics</strong>, especially
+  at companies moving from pilot to production.
   <br /><br />
   <a href="/Resume_SG.pdf" target="_blank" rel="noreferrer">Download resume (PDF) ↗</a>
 `;
