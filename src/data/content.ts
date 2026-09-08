@@ -44,16 +44,24 @@ export type ExperienceEntry = {
 
 export const experience: ExperienceEntry[] = [
   {
-    role: "Manager, Deployment Engineering",
+    role: "Director, Product Operations",
     org: "Pickle Robot Company",
     location: "Denver, CO",
-    when: "JAN 2025 — PRESENT",
+    when: "SEP 2026 — PRESENT",
     image: {
       src: "/images/pickle-banner.webp",
       alt: "Pickle Robot — Physical AI for Supply Chain Automation (gripper)",
       srcset: "/images/pickle-banner-mobile.webp 700w, /images/pickle-banner-1000w.webp 1000w, /images/pickle-banner.webp 1584w",
       sizes: "(max-width: 720px) 400px, 760px",
     },
+    // Bullets pending. index.astro skips the <ul> while this is empty.
+    bulletsHtml: [],
+  },
+  {
+    role: "Manager, Deployment Engineering",
+    org: "Pickle Robot Company",
+    location: "Denver, CO",
+    when: "JAN 2025 — AUG 2026",
     bulletsHtml: [
       "Manage a team of 7 deployment engineers — hiring, performance, and development — across 9 active customer sites running autonomous truck-unloading robots.",
       "Reduced per-site deployment time from 2 weeks to 2 days by standardizing deployment playbooks, networking infrastructure protocols, and customer training programs.",

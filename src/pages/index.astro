@@ -72,9 +72,11 @@ import {
           <span class="org">{job.org} · {job.location}</span>
         </div>
         <span class="when">{job.when}</span>
-        <ul>
-          {job.bulletsHtml.map((b) => <li set:html={b}></li>)}
-        </ul>
+        {job.bulletsHtml.length > 0 && (
+          <ul>
+            {job.bulletsHtml.map((b) => <li set:html={b}></li>)}
+          </ul>
+        )}
       </div>
     ))}
   </section>
