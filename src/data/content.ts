@@ -19,8 +19,10 @@ export const profile = {
 export const ledeHtml = `
   Product operations leader scaling warehouse robotics from
   <strong>startup pilot</strong> to <strong>enterprise production</strong>.
-  Currently managing a team of 7 deployment engineers across 9 customer sites at
-  <a href="https://www.picklerobot.com" target="_blank" rel="noreferrer">Pickle Robot</a>,
+  Now leading product operations at
+  <a href="https://www.picklerobot.com" target="_blank" rel="noreferrer">Pickle Robot</a>
+  across deployment, new product introduction, and customer success, with
+  <strong>P&amp;L and unit-economics</strong> ownership,
   after scaling <strong>$40M+</strong> in AMR fleet deployments at Geek+.
   I bridge deep technical ownership — computer vision, fleet systems, networking —
   with the operational discipline to deliver automation programs reliably.
@@ -210,7 +212,7 @@ export const capabilities: CapabilityGroup[] = [
     items: [
       "Cross-functional team management",
       "Multi-site program ownership",
-      "P&L & deployment economics",
+      "P&L & unit economics",
       "Executive & stakeholder comms",
       "Process standardization",
       "Vendor & partner management",
