@@ -4141,6 +4141,20 @@ export const brews: BrewEntry[] = [
     notes: 'used 2g Mokha Java to reach 15.5g dose',
     flag: 'process-error',
   },
+  {
+    date: '2026-09-13',
+    bean: 'Mokha Java',
+    roaster: 'La Cosecha',
+    roastDate: '2026-08-25',
+    doseG: 15.5,
+    yieldG: 38,
+    timeS: 25,
+    grind: 'DF64 #7',
+    basket: 'DEX 15g',
+    temp: 'Mid',
+    puckScreen: true,
+    method: 'espresso',
+  },
 ];
 
 // Helpers used by the page. Kept here so the page file stays about layout.
