@@ -266,6 +266,145 @@ for (const bagId of rawByBagId.keys()) {
   if (fits.length > 0) fitsByBagId.set(bagId, fits);
 }
 
+// Bean history band. A shaded interquartile ribbon of flow rate against days
+// off roast, pooled over every clean shot of every bag of that bean. This
+// answers "where is this shot landing against the rest of this bean" without
+// asserting a trend, which matters because the data does not support one (see
+// the pooled slope below). It replaces an earlier fitted baseline curve: with
+// I-squared around 70% across bags, a single fitted shape was a claim the data
+// rejects, while a quantile band is only a description of what was logged.
+//
+// Absolute flow rate, deliberately not centered per bag. Centering is the
+// right move when estimating a slope; here the spread between bags IS the
+// history the band is meant to show.
+//
+// Quantiles come from a sliding window in days off roast: at each sample x,
+// widen the window up to BAND_MAX_WINDOW days until it holds at least
+// BAND_MIN_SHOTS shots, then take p25/p75. Where that support does not exist
+// the band BREAKS rather than interpolating across the empty stretch. Beans
+// with fewer than BAND_MIN_CLEAN clean shots get no band at all.
+const BAND_SAMPLES = 48;
+const BAND_MIN_SHOTS = 5;
+const BAND_MIN_CLEAN = 8;
+const BAND_START_WINDOW = 3;   // days, half-width
+const BAND_MAX_WINDOW = 5;     // days, half-width. Past this the band breaks.
+const BAND_MIN_RUN = 2;        // samples needed to draw a segment
+
+function quantile(sorted: number[], q: number): number {
+  if (sorted.length === 1) return sorted[0];
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+
+const cleanByBean = new Map<string, Point[]>();
+for (const [, shots] of rawByBagId.entries()) {
+  for (const p of shots) {
+    if (p.tainted) continue;
+    const list = cleanByBean.get(p.entry.bean) ?? [];
+    list.push(p);
+    cleanByBean.set(p.entry.bean, list);
+  }
+}
+
+type HistoryBand = { path: string; shots: number; bags: number };
+const bandByBean = new Map<string, HistoryBand>();
+for (const [bean, clean] of cleanByBean.entries()) {
+  if (clean.length < BAND_MIN_CLEAN) continue;
+  const xs = clean.map((p) => p.x);
+  const xLo = Math.max(xMin, Math.min(...xs));
+  const xHi = Math.min(xMax, Math.max(...xs));
+  if (xHi <= xLo) continue;
+
+  // Walk the sample points, collecting runs of samples that have real support
+  // within BAND_MAX_WINDOW days. A sample with too few shots nearby ends the
+  // current run, so a bean whose bags sit in far-apart day ranges gets one
+  // segment per range instead of a ribbon drawn straight across the gap.
+  // (Guatemala is the case that matters: bags at 15-28d and 43-55d, nothing
+  // in between.)
+  const segments: string[] = [];
+  let upper: string[] = [];
+  let lower: string[] = [];
+  const flush = () => {
+    if (upper.length >= BAND_MIN_RUN) {
+      segments.push(`M${upper.join(' L')} L${[...lower].reverse().join(' L')} Z`);
+    }
+    upper = [];
+    lower = [];
+  };
+  for (let i = 0; i <= BAND_SAMPLES; i++) {
+    const xi = xLo + ((xHi - xLo) * i) / BAND_SAMPLES;
+    let w = BAND_START_WINDOW;
+    let win = clean.filter((p) => Math.abs(p.x - xi) <= w);
+    while (win.length < BAND_MIN_SHOTS && w < BAND_MAX_WINDOW) {
+      w += 1;
+      win = clean.filter((p) => Math.abs(p.x - xi) <= w);
+    }
+    if (win.length < BAND_MIN_SHOTS) {
+      flush();
+      continue;
+    }
+    const ys = win.map((p) => p.y).sort((a, b) => a - b);
+    upper.push(`${sx(xi).toFixed(1)},${sy(quantile(ys, 0.75)).toFixed(1)}`);
+    lower.push(`${sx(xi).toFixed(1)},${sy(quantile(ys, 0.25)).toFixed(1)}`);
+  }
+  flush();
+  if (segments.length === 0) continue;
+  bandByBean.set(bean, {
+    path: segments.join(' '),
+    shots: clean.length,
+    bags: new Set(clean.map((p) => bagIdOf(p.entry))).size,
+  });
+}
+
+// Resolve per bag for the render loop: every bag of a bean draws that bean's
+// band inside its own <g data-bag-id>, in its own color, so the picker's
+// existing show/hide loop handles it with no extra wiring.
+const bandByBagId = new Map<string, HistoryBand>();
+for (const [bagId, shots] of rawByBagId.entries()) {
+  // Read the bean off a shot, not off the Bag record, so orphan brews (a
+  // bagId with no matching Bag entry) still resolve.
+  const bean = shots[0]?.entry.bean;
+  const band = bean ? bandByBean.get(bean) : undefined;
+  if (band) bandByBagId.set(bagId, band);
+}
+
+// Pooled degradation trend across the whole log, reported in the chart note so
+// the page states what the data actually supports instead of asserting the
+// outgassing story. Within-cohort (bag x grind) estimator: each cohort's shots
+// are centered on that cohort's own means before pooling, so neither level
+// differences between bags nor grind changes mid-bag can masquerade as a trend
+// in time. Slope is g/s per unit of ln(day + 1).
+type PooledTrend = { b: number; se: number; shots: number; cohorts: number };
+function pooledWithinTrend(): PooledTrend | null {
+  let num = 0, den = 0, n = 0, k = 0;
+  const centered: Array<[number, number]> = [];
+  for (const shots of cohortShots.values()) {
+    const clean = shots.filter((p) => !p.tainted);
+    if (clean.length === 0) continue;
+    k += 1;
+    n += clean.length;
+    const uBar = clean.reduce((t, p) => t + Math.log(p.x + 1), 0) / clean.length;
+    const yBar = clean.reduce((t, p) => t + p.y, 0) / clean.length;
+    for (const p of clean) {
+      const du = Math.log(p.x + 1) - uBar;
+      const dy = p.y - yBar;
+      centered.push([du, dy]);
+      num += du * dy;
+      den += du * du;
+    }
+  }
+  if (den < 1e-12 || n - k - 1 <= 0) return null;
+  const b = num / den;
+  let ss = 0;
+  for (const [du, dy] of centered) ss += (dy - b * du) ** 2;
+  return { b, se: Math.sqrt(ss / (n - k - 1) / den), shots: n, cohorts: k };
+}
+const pooledTrend = pooledWithinTrend();
+// Flat until the slope clears two standard errors either way.
+const trendIsFlat = pooledTrend ? Math.abs(pooledTrend.b) < 2 * pooledTrend.se : true;
+
 // ---------- BAG PICKER ----------
 // Build the dropdown's options in three optgroups, in this order:
 //   1. Coming soon  (bought, not yet opened)
@@ -503,6 +642,22 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
           </g>
         ))}
 
+        {/* Bean history band: interquartile ribbon of this bean's clean shots
+            across all of its bags. Behind the gridlines so it never competes
+            with the data. Non-selected bags are SSR-hidden, same as above. */}
+        {[...bandByBagId.entries()].map(([id, band]) => (
+          <g data-bag-id={id} style={id === defaultBagId ? undefined : 'display:none'}>
+            <path
+              d={band.path}
+              fill={bagColor.get(id) ?? '#011f5b'}
+              fill-opacity="0.10"
+              stroke="none"
+            >
+              <title>{`${bagsByBagId.get(id)?.bean ?? id} · middle half of ${band.shots} clean shots across ${band.bags} bag${band.bags === 1 ? '' : 's'}`}</title>
+            </path>
+          </g>
+        ))}
+
         {/* gridlines + x-axis ticks */}
         {xTicks.map((t) => (
           <g>
@@ -665,20 +820,46 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
           <span class="legend-dot legend-dot-solid"></span>daily mean
           <span class="legend-dot legend-dot-ghost"></span>individual shot
           <span class="legend-x" aria-hidden="true">×</span>excluded
+          <span
+            class="legend-dot"
+            style="background:#616160;opacity:0.18;border-radius:2px;width:18px"
+            aria-hidden="true"
+          ></span>bean history (middle half)
         </span>
       </figcaption>
     </figure>
 
     <p class="chart-note">
-      Higher flow = less puck resistance. Rising trend at the same grind
-      suggests beans losing CO<sub>2</sub>. Each curve is a logarithmic fit
+      Higher flow = less puck resistance. Beans losing CO<sub>2</sub> should
+      push flow up at a fixed grind, so that was the hypothesis this chart was
+      built to test.
+      {pooledTrend && (
+        <>
+          {' '}It is not showing up. Pooled over all {pooledTrend.shots} clean
+          shots, with every bag-and-grind cohort centered on its own means so
+          that neither level differences between bags nor a grind change
+          mid-bag can pose as a trend, the slope is{' '}
+          {pooledTrend.b >= 0 ? '+' : '−'}{Math.abs(pooledTrend.b).toFixed(2)}
+          {' '}± {pooledTrend.se.toFixed(2)} g/s per unit of ln(day + 1){trendIsFlat
+            ? ', which is not distinguishable from flat. Any real drift is smaller than the shot-to-shot scatter at this sample size.'
+            : '. Read the per-bean curves with that in mind.'}
+          {' '}The individual bags also disagree with each other by more than
+          noise allows, so one shared degradation shape is not a claim this
+          data supports. These figures recompute on every build.
+        </>
+      )}
+      {' '}Each curve is a logarithmic fit
       (y = a + b·ln(x + 1)) on clean shots only; it captures the fast-early,
       slowing degradation shape without overfitting the handful of data
       points per bag. Fits are computed per grind setting — bags brewed
       with multiple grinds get one curve per grind, distinguished by stroke
       style (solid, then dashed, then dotted in the order each grind was
-      first used). Solid dots are per-day averages of clean shots, hollow
-      dashed rings are individual clean shots, and
+      first used). The pale ribbon behind them is this bean's own history: the
+      middle half of every clean shot it has produced across all of its bags,
+      as a sliding quantile on days off roast. It describes where shots have
+      landed and deliberately asserts no trend. Hover it for the shot and bag
+      count. Solid dots are per-day averages of clean
+      shots, hollow dashed rings are individual clean shots, and
       <span aria-hidden="true">×</span> marks shots excluded from the math
       (dial-in sweeps, prep mistakes, or process errors — hover for the
       reason). Shaded band is the rough espresso peak window for the selected
