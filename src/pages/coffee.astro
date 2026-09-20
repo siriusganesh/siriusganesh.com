@@ -277,32 +277,31 @@ for (const bagId of rawByBagId.keys()) {
 // repurchased bean pools across its bags. Days off roast is the x-axis, so
 // bags with different roast dates overlay without rebasing.
 //
+// The slope is a WITHIN-BAG (fixed-effects) estimate: each bag's shots are
+// centered on that bag's own means before pooling, so only within-bag
+// variation informs the shape. Pooling the raw shots instead would let level
+// differences between bags masquerade as a trend in time, because bags cover
+// different day ranges — a bag that ran fast early and a bag that ran slow
+// late produce a falling pooled curve even when every individual bag rises.
+// The curve is then drawn through each bag's own centroid, so every bag of
+// the bean gets the same shape anchored at its own level.
+//
 // Skipped when the curve would just retrace an existing one: a bean with a
 // single bag brewed at a single grind has exactly one cohort fit, and the
 // baseline is that fit by definition.
 //
 // Thresholds match the cohort fits: >=3 clean shots and >=3 distinct clean
-// days off roast.
-function logFit(clean: Point[]): Fit | null {
-  const distinctDays = new Set(clean.map((p) => p.x));
-  if (clean.length < 3 || distinctDays.size < 3) return null;
-  const n = clean.length;
-  let sU = 0, sY = 0, sUU = 0, sUY = 0;
-  for (const p of clean) {
-    const u = Math.log(p.x + 1);
-    sU += u;
-    sY += p.y;
-    sUU += u * u;
-    sUY += u * p.y;
-  }
-  const denom = n * sUU - sU * sU;
-  if (Math.abs(denom) < 1e-12) return null;  // x's collapsed; no fit
-  const b = (n * sUY - sU * sY) / denom;
-  return { a: (sY - b * sU) / n, b };
-}
+// days off roast, pooled over the bean.
+type Centroid = { u: number; y: number };
+type BeanShape = {
+  b: number;                          // within-bag slope on u = ln(x + 1)
+  xLo: number;                        // pooled day range, clamped to the axis
+  xHi: number;
+  centroidByBagId: Map<string, Centroid>;
+  shots: number;
+  bags: number;
+};
 
-type Baseline = { path: string; shots: number; bags: number };
-const baselineByBean = new Map<string, Baseline>();
 const cleanByBean = new Map<string, Point[]>();
 for (const [, shots] of rawByBagId.entries()) {
   for (const p of shots) {
@@ -312,35 +311,70 @@ for (const [, shots] of rawByBagId.entries()) {
     cleanByBean.set(p.entry.bean, list);
   }
 }
+
+const shapeByBean = new Map<string, BeanShape>();
 for (const [bean, clean] of cleanByBean.entries()) {
-  const bagCount = new Set(clean.map((p) => bagIdOf(p.entry))).size;
-  const grindCount = new Set(clean.map((p) => p.grind)).size;
-  if (bagCount < 2 && grindCount < 2) continue;  // would retrace the lone cohort fit
-  const fit = logFit(clean);
-  if (!fit) continue;
+  const byBag = new Map<string, Point[]>();
+  for (const p of clean) {
+    const bagId = bagIdOf(p.entry);
+    const list = byBag.get(bagId) ?? [];
+    list.push(p);
+    byBag.set(bagId, list);
+  }
+  if (byBag.size < 2 && new Set(clean.map((p) => p.grind)).size < 2) continue;
+  if (clean.length < 3 || new Set(clean.map((p) => p.x)).size < 3) continue;
+
+  // Per-bag centroids, then the within estimator over the centered data.
+  const centroidByBagId = new Map<string, Centroid>();
+  let num = 0, den = 0;
+  for (const [bagId, bagShots] of byBag.entries()) {
+    const uBar = bagShots.reduce((t, p) => t + Math.log(p.x + 1), 0) / bagShots.length;
+    const yBar = bagShots.reduce((t, p) => t + p.y, 0) / bagShots.length;
+    centroidByBagId.set(bagId, { u: uBar, y: yBar });
+    for (const p of bagShots) {
+      const du = Math.log(p.x + 1) - uBar;
+      num += du * (p.y - yBar);
+      den += du * du;
+    }
+  }
+  if (Math.abs(den) < 1e-12) continue;  // every bag's x's collapsed; no shape
+
   const xs = clean.map((p) => p.x);
   const xLo = Math.max(xMin, Math.min(...xs));
   const xHi = Math.min(xMax, Math.max(...xs));
   if (xHi <= xLo) continue;
-  const pts: string[] = [];
-  for (let i = 0; i <= FIT_SAMPLES; i++) {
-    const xi = xLo + ((xHi - xLo) * i) / FIT_SAMPLES;
-    const yi = fit.a + fit.b * Math.log(xi + 1);
-    pts.push(`${sx(xi).toFixed(1)},${sy(yi).toFixed(1)}`);
-  }
-  baselineByBean.set(bean, { path: pts.join(' '), shots: clean.length, bags: bagCount });
+
+  shapeByBean.set(bean, {
+    b: num / den,
+    xLo,
+    xHi,
+    centroidByBagId,
+    shots: clean.length,
+    bags: byBag.size,
+  });
 }
 
-// Resolve per bag for the render loop: every bag of a bean draws that bean's
-// baseline inside its own <g data-bag-id>, in its own color, so the picker's
-// existing show/hide loop handles it with no extra wiring.
+// Resolve per bag for the render loop: every bag of a bean draws the bean's
+// shape through its own centroid, inside its own <g data-bag-id> and in its
+// own color, so the picker's existing show/hide loop handles it with no extra
+// wiring. A bag with no clean shots has no centroid and gets no baseline.
+type Baseline = { path: string; shots: number; bags: number };
 const baselineByBagId = new Map<string, Baseline>();
 for (const [bagId, shots] of rawByBagId.entries()) {
   // Read the bean off a shot, not off the Bag record, so orphan brews (a
   // bagId with no matching Bag entry) still resolve.
   const bean = shots[0]?.entry.bean;
-  const bl = bean ? baselineByBean.get(bean) : undefined;
-  if (bl) baselineByBagId.set(bagId, bl);
+  const shape = bean ? shapeByBean.get(bean) : undefined;
+  if (!shape) continue;
+  const centroid = shape.centroidByBagId.get(bagId);
+  if (!centroid) continue;
+  const pts: string[] = [];
+  for (let i = 0; i <= FIT_SAMPLES; i++) {
+    const xi = shape.xLo + ((shape.xHi - shape.xLo) * i) / FIT_SAMPLES;
+    const yi = centroid.y + shape.b * (Math.log(xi + 1) - centroid.u);
+    pts.push(`${sx(xi).toFixed(1)},${sy(yi).toFixed(1)}`);
+  }
+  baselineByBagId.set(bagId, { path: pts.join(' '), shots: shape.shots, bags: shape.bags });
 }
 
 // ---------- BAG PICKER ----------
@@ -714,7 +748,7 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
                   stroke-opacity="0.16"
                   stroke-linecap="round"
                 >
-                  <title>{`${bagsByBagId.get(id)?.bean ?? id} baseline · ${baselineByBagId.get(id)!.shots} clean shots across ${baselineByBagId.get(id)!.bags} bag${baselineByBagId.get(id)!.bags === 1 ? '' : 's'}`}</title>
+                  <title>{`${bagsByBagId.get(id)?.bean ?? id} baseline · shape from ${baselineByBagId.get(id)!.shots} clean shots across ${baselineByBagId.get(id)!.bags} bag${baselineByBagId.get(id)!.bags === 1 ? '' : 's'}, centered on this bag`}</title>
                 </polyline>
               )}
               {cohortFits.map((cf) => (
@@ -766,10 +800,12 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
       points per bag. Fits are computed per grind setting — bags brewed
       with multiple grinds get one curve per grind, distinguished by stroke
       style (solid, then dashed, then dotted in the order each grind was
-      first used). Behind those sits a wide, faint baseline curve, fit
-      across every clean shot of every bag of the same bean, so a bag can be
-      read against how that bean usually behaves. Hover it for the pooled shot
-      and bag count. Solid dots are per-day averages of clean
+      first used). Behind those sits a wide, faint baseline curve: the
+      degradation shape of the bean itself, estimated from every clean shot of
+      every bag of that bean and then drawn through the selected bag's own
+      average. Each bag is centered on its own mean before pooling, so a bag
+      that simply ran fast or slow does not tilt the shape — only movement
+      within a bag does. Hover it for the pooled shot and bag count. Solid dots are per-day averages of clean
       shots, hollow dashed rings are individual clean shots, and
       <span aria-hidden="true">×</span> marks shots excluded from the math
       (dial-in sweeps, prep mistakes, or process errors — hover for the
