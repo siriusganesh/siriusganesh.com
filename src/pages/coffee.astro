@@ -266,6 +266,54 @@ for (const bagId of rawByBagId.keys()) {
   if (fits.length > 0) fitsByBagId.set(bagId, fits);
 }
 
+// Bag-level baseline fit. Same log model as the cohort fits, but run over every
+// clean shot on the bag regardless of grind. The cohort curves answer "how is
+// this grind trending"; the baseline answers "where does that grind sit against
+// the bag as a whole". Rendered as a wide, very faint stroke behind the cohort
+// curves so it reads as a reference band, not another series.
+//
+// Built only when the bag has 2+ distinct grinds among its clean shots. With a
+// single grind the baseline is the cohort fit by definition, so drawing both
+// would just double the stroke.
+//
+// Thresholds match the cohort fits: >=3 clean shots and >=3 distinct clean days
+// off roast.
+function logFit(clean: Point[]): Fit | null {
+  const distinctDays = new Set(clean.map((p) => p.x));
+  if (clean.length < 3 || distinctDays.size < 3) return null;
+  const n = clean.length;
+  let sU = 0, sY = 0, sUU = 0, sUY = 0;
+  for (const p of clean) {
+    const u = Math.log(p.x + 1);
+    sU += u;
+    sY += p.y;
+    sUU += u * u;
+    sUY += u * p.y;
+  }
+  const denom = n * sUU - sU * sU;
+  if (Math.abs(denom) < 1e-12) return null;  // x's collapsed; no fit
+  const b = (n * sUY - sU * sY) / denom;
+  return { a: (sY - b * sU) / n, b };
+}
+const baselineByBagId = new Map<string, string>();
+for (const [bagId, shots] of rawByBagId.entries()) {
+  const clean = shots.filter((p) => !p.tainted);
+  if (new Set(clean.map((p) => p.grind)).size < 2) continue;
+  const fit = logFit(clean);
+  if (!fit) continue;
+  const xs = clean.map((p) => p.x);
+  const xLo = Math.max(xMin, Math.min(...xs));
+  const xHi = Math.min(xMax, Math.max(...xs));
+  if (xHi <= xLo) continue;
+  const pts: string[] = [];
+  for (let i = 0; i <= FIT_SAMPLES; i++) {
+    const xi = xLo + ((xHi - xLo) * i) / FIT_SAMPLES;
+    const yi = fit.a + fit.b * Math.log(xi + 1);
+    pts.push(`${sx(xi).toFixed(1)},${sy(yi).toFixed(1)}`);
+  }
+  baselineByBagId.set(bagId, pts.join(' '));
+}
+
 // ---------- BAG PICKER ----------
 // Build the dropdown's options in three optgroups, in this order:
 //   1. Coming soon  (bought, not yet opened)
@@ -628,6 +676,18 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
             : id;
           return (
             <g data-bag-id={id}>
+              {baselineByBagId.has(id) && (
+                <polyline
+                  points={baselineByBagId.get(id)}
+                  fill="none"
+                  stroke={color}
+                  stroke-width="3"
+                  stroke-opacity="0.16"
+                  stroke-linecap="round"
+                >
+                  <title>{`${label} · all-grind baseline`}</title>
+                </polyline>
+              )}
               {cohortFits.map((cf) => (
                 <polyline
                   points={cf.path}
@@ -677,8 +737,10 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
       points per bag. Fits are computed per grind setting — bags brewed
       with multiple grinds get one curve per grind, distinguished by stroke
       style (solid, then dashed, then dotted in the order each grind was
-      first used). Solid dots are per-day averages of clean shots, hollow
-      dashed rings are individual clean shots, and
+      first used). Those bags also get a wide, faint baseline curve fit across
+      all their clean shots regardless of grind, so a single grind can be read
+      against the bag as a whole. Solid dots are per-day averages of clean
+      shots, hollow dashed rings are individual clean shots, and
       <span aria-hidden="true">×</span> marks shots excluded from the math
       (dial-in sweeps, prep mistakes, or process errors — hover for the
       reason). Shaded band is the rough espresso peak window for the selected
