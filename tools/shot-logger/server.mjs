@@ -14,6 +14,9 @@
 //   Lighthouse via the workflow's paths-ignore, so in practice this waits
 //   on the Cloudflare Pages build — which still fails if the site breaks.
 // - Bags are read-only here. Adding/opening/closing bags stays a chat task.
+// - After a successful merge the process exits. The launcher script
+//   (~/Applications/Start Shot Logger.command) then quits the web app and
+//   closes its Terminal window, so a shipped batch ends the whole session.
 
 import http from 'node:http';
 import { execFile } from 'node:child_process';
@@ -30,6 +33,9 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const COFFEE_TS = path.join(REPO_ROOT, 'src', 'data', 'coffee.ts');
 const CHECK_POLL_MS = 30_000;
 const CHECK_TIMEOUT_MS = 25 * 60_000;
+// Grace period between a merge and the exit: one more UI poll (3s) plus the
+// state refresh that follows it.
+const SHUTDOWN_DELAY_MS = 10_000;
 
 // ---------------------------------------------------------------------------
 // Data access
@@ -439,10 +445,24 @@ async function openPrAndMerge(job, worktree, branch, msg) {
     await gh(['pr', 'merge', prUrl, '--squash', '--delete-branch']);
     job.status = 'merged';
     jlog(job, 'Checks green — squash-merged and deleted branch.');
+    shutdownAfterMerge(job);
   } else {
     job.status = verdict === 'fail' ? 'checks-failed' : 'timeout';
     jlog(job, `Not merging (${job.status}). PR left open: ${prUrl}`);
   }
+}
+
+// A shipped batch ends the session: the launcher quits the web app and closes
+// its Terminal window once this process is gone. Stands down if another batch
+// is still in flight, and does nothing when a test imports this module.
+function shutdownAfterMerge(job) {
+  if (!server.listening) return;
+  if ([...jobs.values()].some((j) => j !== job && j.status === 'running')) return;
+  jlog(job, 'Closing the app and this window.');
+  setTimeout(() => {
+    server.close();
+    process.exit(0);
+  }, SHUTDOWN_DELAY_MS);
 }
 
 async function waitForChecks(job, prUrl) {
