@@ -566,7 +566,7 @@ export const brews: BrewEntry[] = [
     temp: 'Mid',
     puckScreen: true,
     method: 'espresso',
-    notes: 'Scale battery died right after pour; yield was 36.x — saw 36.5 but the decimal is uncertain.',
+    notes: 'Scale battery died right after pour; yield was 36.x; saw 36.5 but the decimal is uncertain.',
     flag: 'prep-error',
   },
   {
@@ -999,7 +999,7 @@ export const brews: BrewEntry[] = [
     temp: 'High',
     puckScreen: true,
     method: 'espresso',
-    notes: 'Old bag settings — #5 too fine, High too hot for this medium-dark blend.',
+    notes: 'Old bag settings: #5 too fine, High too hot for this medium-dark blend.',
     flag: 'dial-in',
   },
   {
@@ -1088,7 +1088,7 @@ export const brews: BrewEntry[] = [
     temp: 'Mid',
     puckScreen: true,
     method: 'espresso',
-    notes: 'Tested coarser at #8 — too sour. Sticking with #7.',
+    notes: 'Tested coarser at #8: too sour. Sticking with #7.',
   },
   {
     date: '2026-05-16',
@@ -1864,7 +1864,7 @@ export const brews: BrewEntry[] = [
     temp: 'Mid',
     puckScreen: true,
     method: 'espresso',
-    notes: 'Sour hint with no bitterness, missing chocolate notes — slight under-extraction. First shot from new Wizard Cat bag.',
+    notes: 'Sour hint with no bitterness, missing chocolate notes, slight under-extraction. First shot from new Wizard Cat bag.',
   },
   {
     date: '2026-06-10',
@@ -2675,7 +2675,7 @@ export const brews: BrewEntry[] = [
     temp: 'Mid',
     puckScreen: true,
     method: 'espresso',
-    notes: 'First shot of the new Guatemala bag. Starting on DF64 #5 / Mid — previous Guatemala bag ran DF64 #5 / High.',
+    notes: 'First shot of the new Guatemala bag. Starting on DF64 #5 / Mid; previous Guatemala bag ran DF64 #5 / High.',
   },
   {
     date: '2026-07-09',
@@ -2985,7 +2985,7 @@ export const brews: BrewEntry[] = [
     temp: 'Mid',
     puckScreen: true,
     method: 'espresso',
-    notes: 'First shot of the new Mexico bag. DF64 #6, Mid — coarser than the previous Guatemala bag (which ran DF64 #5) since Mexico is a medium roast.',
+    notes: 'First shot of the new Mexico bag. DF64 #6, Mid, coarser than the previous Guatemala bag (which ran DF64 #5) since Mexico is a medium roast.',
   },
   {
     date: '2026-07-22',

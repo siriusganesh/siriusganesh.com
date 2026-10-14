@@ -851,7 +851,7 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
       {' '}Each curve is a logarithmic fit
       (y = a + b·ln(x + 1)) on clean shots only; it captures the fast-early,
       slowing degradation shape without overfitting the handful of data
-      points per bag. Fits are computed per grind setting — bags brewed
+      points per bag. Fits are computed per grind setting. Bags brewed
       with multiple grinds get one curve per grind, distinguished by stroke
       style (solid, then dashed, then dotted in the order each grind was
       first used). The pale ribbon behind them is this bean's own history: the
@@ -861,9 +861,9 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
       count. Solid dots are per-day averages of clean
       shots, hollow dashed rings are individual clean shots, and
       <span aria-hidden="true">×</span> marks shots excluded from the math
-      (dial-in sweeps, prep mistakes, or process errors — hover for the
+      (dial-in sweeps, prep mistakes, or process errors; hover for the
       reason). Shaded band is the rough espresso peak window for the selected
-      bag's roast level — dark 7 – 14d, medium-dark 8 – 17d, medium 10 – 21d,
+      bag's roast level: dark 7 – 14d, medium-dark 8 – 17d, medium 10 – 21d,
       light-medium 14 – 24d, light 18 – 28d, ultra light 21 – 42d. Darker
       roasts outgas faster and stale sooner, so their window opens and closes
       earlier. Bags with no roast level recorded get no band.
@@ -915,7 +915,7 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
                 <td>{ratio(e)}</td>
                 <td>{e.timeS}s</td>
                 <td>{flowRate(e).toFixed(2)}</td>
-                <td>{e.grind ?? '—'}</td>
+                <td>{e.grind ?? '-'}</td>
                 <td class="notes-cell">
                   {e.notes && (
                     <button
@@ -965,7 +965,7 @@ const nonDefaultRowsByBagId = [...newestFirstByBagId.entries()].filter(
               <td>{ratio(e)}</td>
               <td>{e.timeS}s</td>
               <td>{flowRate(e).toFixed(2)}</td>
-              <td>{e.grind ?? '—'}</td>
+              <td>{e.grind ?? '-'}</td>
               <td class="notes-cell">
                 {e.notes && (
                   <button

@@ -761,6 +761,19 @@ section.block > header .meta {
   margin-bottom: 0.25rem;
 }
 
+/* Linked tiles: the label link stretches over the whole tile. */
+.tile-link { text-decoration: none; }
+.tile-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.tile-link:focus-visible { outline: none; }
+.tile-link:focus-visible::after { outline: 2px solid var(--navy); outline-offset: -2px; }
+.about-tile:has(.tile-link) { transition: border-color 0.15s; }
+.about-tile:has(.tile-link:hover) { border-color: var(--navy); }
+.about-tile:has(.tile-link:hover) .tile-link { text-decoration: underline; }
+
 .tile-headline {
   display: block;
   font-family: var(--font-mono);

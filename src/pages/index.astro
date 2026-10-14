@@ -201,7 +201,15 @@ import {
               <img src={tile.src} alt={tile.alt} loading="lazy" decoding="async" />
             </div>
             <figcaption>
-              <span class="tile-label">{tile.label}</span>
+              {tile.href ? (
+                <a
+                  class="tile-label tile-link"
+                  href={tile.href}
+                  {...(tile.href.startsWith("http") ? { target: "_blank", rel: "noopener" } : {})}
+                >{tile.label} {tile.href.startsWith("http") ? "↗" : "→"}</a>
+              ) : (
+                <span class="tile-label">{tile.label}</span>
+              )}
               <span class="tile-caption">{tile.caption}</span>
             </figcaption>
           </figure>

@@ -24,7 +24,7 @@ export const ledeHtml = `
   across deployment, new product introduction, and customer success, with
   <strong>P&amp;L and unit-economics</strong> ownership,
   after scaling <strong>$40M+</strong> in AMR fleet deployments at Geek+.
-  I bridge deep technical ownership — computer vision, fleet systems, networking —
+  I bridge deep technical ownership (computer vision, fleet systems, networking)
   with the operational discipline to deliver automation programs reliably.
 `;
 
@@ -49,10 +49,10 @@ export const experience: ExperienceEntry[] = [
     role: "Director, Product Operations",
     org: "Pickle Robot Company",
     location: "Denver, CO",
-    when: "SEP 2026 — PRESENT",
+    when: "SEP 2026 – PRESENT",
     image: {
       src: "/images/pickle-banner.webp",
-      alt: "Pickle Robot — Physical AI for Supply Chain Automation (gripper)",
+      alt: "Pickle Robot: Physical AI for Supply Chain Automation (gripper)",
       srcset: "/images/pickle-banner-mobile.webp 700w, /images/pickle-banner-1000w.webp 1000w, /images/pickle-banner.webp 1584w",
       sizes: "(max-width: 720px) 400px, 760px",
     },
@@ -63,12 +63,12 @@ export const experience: ExperienceEntry[] = [
     role: "Manager, Deployment Engineering",
     org: "Pickle Robot Company",
     location: "Denver, CO",
-    when: "JAN 2025 — AUG 2026",
+    when: "JAN 2025 – AUG 2026",
     bulletsHtml: [
-      "Manage a team of 7 deployment engineers — hiring, performance, and development — across 9 active customer sites running autonomous truck-unloading robots.",
+      "Manage a team of 7 deployment engineers (hiring, performance, and development) across 9 active customer sites running autonomous truck-unloading robots.",
       "Reduced per-site deployment time from 2 weeks to 2 days by standardizing deployment playbooks, networking infrastructure protocols, and customer training programs.",
       "Own end-to-end deployment of 15+ robotic systems across enterprise logistics warehouses; on-time delivery tied to customer business objectives.",
-      "Partner with engineering and product to close the loop between field data and iterative design — the deployment team is the fastest feedback path into the roadmap.",
+      "Partner with engineering and product to close the loop between field data and iterative design; the deployment team is the fastest feedback path into the roadmap.",
       "Primary customer contact during rollout; translate technical progress into business outcomes for stakeholders up to the VP level.",
     ],
   },
@@ -76,15 +76,15 @@ export const experience: ExperienceEntry[] = [
     role: "Systems Consultant",
     org: "Geek+ Robotics",
     location: "San Diego, CA",
-    when: "AUG 2023 — JAN 2025",
+    when: "AUG 2023 – JAN 2025",
     image: {
       src: "/images/geekplus-banner.webp",
-      alt: "Geek+ — One-Stop Partner For Warehouse Robotics",
+      alt: "Geek+: One-Stop Partner For Warehouse Robotics",
       srcset: "/images/geekplus-banner-mobile.webp 700w, /images/geekplus-banner-1000w.webp 1000w, /images/geekplus-banner.webp 1584w",
       sizes: "(max-width: 720px) 400px, 760px",
     },
     bulletsHtml: [
-      "Advised enterprise customers on AMR deployments, including <strong>UPS Happy Returns' first automated returns hub</strong> (150 robots) — reduced return processing time by 35%.",
+      "Advised enterprise customers on AMR deployments, including <strong>UPS Happy Returns' first automated returns hub</strong> (150 robots), reducing return processing time by 35%.",
       "Designed and executed testing strategies for fleet management systems: RESTful API integrations and UAT, hitting 100% SLA compliance at go-live.",
       "Built scalable SOPs and troubleshooting frameworks that reduced system downtime by 15% across active sites.",
       "Drove cross-functional delivery across engineering, support, and customer teams from scoping through go-live.",
@@ -94,7 +94,7 @@ export const experience: ExperienceEntry[] = [
     role: "Robotics Engineer / Deployment Manager",
     org: "Geek+ Robotics",
     location: "San Diego, CA",
-    when: "AUG 2021 — JUL 2023",
+    when: "AUG 2021 – JUL 2023",
     bulletsHtml: [
       "Directed planning, scheduling, and budgeting for <strong>$40M+ in AMR fleet deployment projects</strong>, including a 700+ robot facility for UPS that optimized storage capacity by 30%.",
       "Managed supply chain, installation, and system testing; delivered on schedule against stringent quality and performance benchmarks.",
@@ -110,7 +110,7 @@ export const experience: ExperienceEntry[] = [
 
 export const educationBanner = {
   src: "/images/uiuc-campus.webp",
-  alt: "University of Illinois — Foellinger Auditorium on the main quad",
+  alt: "University of Illinois, Foellinger Auditorium on the main quad",
   srcset: "/images/uiuc-campus-mobile.webp 700w, /images/uiuc-campus-1000w.webp 1000w, /images/uiuc-campus.webp 1584w",
   // sizes mirrors the experience banner pattern — banner spans the content
   // column up to ~760px on desktop. Browser at DPR=1 picks the 1000w variant;
@@ -131,8 +131,8 @@ export const school: School = {
   detail: "Minor, Business · Grainger College of Engineering",
   highlightsHtml: [
     "Dean's List, College of Engineering",
-    "Research Assistant, Energy Transport Research Lab (ETRL) — Prof. Nenad Miljkovic's group",
-    "American Mensa — Area Coordinator, Champaign County",
+    "Research Assistant, Energy Transport Research Lab (ETRL), Prof. Nenad Miljkovic's group",
+    "American Mensa, Area Coordinator, Champaign County",
   ],
 };
 
@@ -253,7 +253,7 @@ export const press: PressItem[] = [
   {
     title: "Robots that spare warehouse workers the heavy lifting",
     descriptionHtml: `
-      MIT News company feature on Pickle Robot — the autonomous truck-unloading
+      MIT News company feature on Pickle Robot, the autonomous truck-unloading
       platform I lead customer deployments for. Profiles the MIT-alum founding
       team and covers the product's current customer set, including UPS and
       Yusen Logistics.
@@ -264,7 +264,7 @@ export const press: PressItem[] = [
   {
     title: "How UPS + Happy Returns is making customer returns easy",
     descriptionHtml: `
-      UPS feature on the first fully automated returns processing hub — 150 Geek+ AMRs
+      UPS feature on the first fully automated returns processing hub: 150 Geek+ AMRs
       I advised on as Systems Consultant. Return processing time down 35%.
     `,
     metaLine: "UPS Newsroom · Happy Returns · 150-robot AMR deployment · January 2025",
@@ -273,7 +273,7 @@ export const press: PressItem[] = [
   {
     title: "5 ways the new UPS Velocity facility orchestrates",
     descriptionHtml: `
-      UPS feature on the Velocity facility — 700+ Geek+ AMRs, $40M+ program scope.
+      UPS feature on the Velocity facility: 700+ Geek+ AMRs, $40M+ program scope.
       I directed planning, scheduling, and budgeting as Deployment Manager.
       Storage capacity optimized by 30%.
     `,
@@ -285,16 +285,15 @@ export const press: PressItem[] = [
 // About section paragraphs — genuinely off-the-clock. Career/P&L talk
 // belongs in Experience, not here.
 export const aboutParagraphsHtml: string[] = [
-  `Off the clock: <a href="/coffee">espresso</a> (a running shot log on a Lelit MaraX, tracking flow rate against days off roast), RC aviation
-   (EDF jets and collective-pitch helis), and as many <a href="https://siriusganesh.github.io/co-14ers/" target="_blank" rel="noopener">Colorado 14ers</a> as
-   the calendar allows. <strong>Maple</strong> — our golden retriever and unofficial
-   chief morale officer — shows up on most of the good ones.`,
+  `Off the clock: <a href="/coffee">espresso</a> (a running shot log on a Lelit MaraX, tracking flow rate against days off roast) and as many <a href="https://siriusganesh.github.io/co-14ers/" target="_blank" rel="noopener">Colorado 14ers</a> as
+   the calendar allows. <strong>Maple</strong>, our golden retriever and unofficial
+   chief morale officer, shows up on most of the good ones.`,
 ];
 
 // Gallery tiles for the About section. Photo tiles are portrait (4:5) by
 // default; shape "landscape" spans two grid columns.
 export type AboutTile =
-  | { kind: "photo"; src: string; alt: string; label: string; caption: string; shape?: "landscape" }
+  | { kind: "photo"; src: string; alt: string; label: string; caption: string; shape?: "landscape"; href?: string }
   | { kind: "text"; label: string; headline: string; caption: string };
 
 export const aboutGallery: AboutTile[] = [
@@ -303,7 +302,8 @@ export const aboutGallery: AboutTile[] = [
     src: "/images/espresso.webp",
     alt: "Espresso pull on a Lelit machine",
     label: "Espresso",
-    caption: "Shot log · flow rate vs. roast age",
+    caption: "Coffee lab · flow rate vs. roast age",
+    href: "/coffee",
   },
   {
     kind: "photo",
@@ -317,8 +317,9 @@ export const aboutGallery: AboutTile[] = [
     src: "/images/14ers-summit.webp",
     alt: "Snow-dusted ridgeline and peaks seen from a Colorado 14er summit",
     label: "14ers",
-    caption: "Mountaineering · Colorado's 14,000 ft peaks",
+    caption: "co-14ers · peak and route finder",
     shape: "landscape",
+    href: "https://siriusganesh.github.io/co-14ers/",
   },
 ];
 
