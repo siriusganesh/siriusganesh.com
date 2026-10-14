@@ -285,8 +285,8 @@ export const press: PressItem[] = [
 // About section paragraphs — genuinely off-the-clock. Career/P&L talk
 // belongs in Experience, not here.
 export const aboutParagraphsHtml: string[] = [
-  `Off the clock: <a href="/coffee">espresso</a> (still chasing the god shot on a Lelit), RC aviation
-   (EDF jets and collective-pitch helis), and as much <a href="https://siriusganesh.github.io/co-14ers/" target="_blank" rel="noopener">Colorado Rockies</a> trail time as
+  `Off the clock: <a href="/coffee">espresso</a> (a running shot log on a Lelit MaraX, tracking flow rate against days off roast), RC aviation
+   (EDF jets and collective-pitch helis), and as many <a href="https://siriusganesh.github.io/co-14ers/" target="_blank" rel="noopener">Colorado 14ers</a> as
    the calendar allows. <strong>Maple</strong> — our golden retriever and unofficial
    chief morale officer — shows up on most of the good ones.`,
 ];
@@ -303,7 +303,7 @@ export const aboutGallery: AboutTile[] = [
     src: "/images/espresso.webp",
     alt: "Espresso pull on a Lelit machine",
     label: "Espresso",
-    caption: "Lelit · chasing the god shot",
+    caption: "Shot log · flow rate vs. roast age",
   },
   {
     kind: "photo",
@@ -314,10 +314,10 @@ export const aboutGallery: AboutTile[] = [
   },
   {
     kind: "photo",
-    src: "/images/aspen-lake.webp",
-    alt: "Aspen trees in fall color along a Rocky Mountain lake",
-    label: "Rockies",
-    caption: "Aspens and alpine lakes, Colorado",
+    src: "/images/14ers-summit.webp",
+    alt: "Snow-dusted ridgeline and peaks seen from a Colorado 14er summit",
+    label: "14ers",
+    caption: "Mountaineering · Colorado's 14,000 ft peaks",
   },
   {
     kind: "text",
