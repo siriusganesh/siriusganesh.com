@@ -291,10 +291,10 @@ export const aboutParagraphsHtml: string[] = [
    chief morale officer — shows up on most of the good ones.`,
 ];
 
-// Gallery tiles for the About section. Mix of photo tiles and one text tile
-// for RC aviation (no photo yet).
+// Gallery tiles for the About section. Photo tiles are portrait (4:5) by
+// default; shape "landscape" spans two grid columns.
 export type AboutTile =
-  | { kind: "photo"; src: string; alt: string; label: string; caption: string }
+  | { kind: "photo"; src: string; alt: string; label: string; caption: string; shape?: "landscape" }
   | { kind: "text"; label: string; headline: string; caption: string };
 
 export const aboutGallery: AboutTile[] = [
@@ -318,12 +318,7 @@ export const aboutGallery: AboutTile[] = [
     alt: "Snow-dusted ridgeline and peaks seen from a Colorado 14er summit",
     label: "14ers",
     caption: "Mountaineering · Colorado's 14,000 ft peaks",
-  },
-  {
-    kind: "text",
-    label: "RC aviation",
-    headline: "EDF jets &\ncollective-pitch helis",
-    caption: "Respect the rotor disc.",
+    shape: "landscape",
   },
 ];
 

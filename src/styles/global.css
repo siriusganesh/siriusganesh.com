@@ -712,6 +712,12 @@ section.block > header .meta {
 
 .about-tile.photo {
   margin: 0;
+  /* Image row and caption row line up across tiles, so a two-line caption
+     on one tile does not shorten the image on another. */
+  grid-row: span 2;
+  display: grid;
+  grid-template-rows: subgrid;
+  row-gap: 0;
 }
 
 .about-tile.photo img {
@@ -719,6 +725,18 @@ section.block > header .meta {
   aspect-ratio: 4 / 5;
   object-fit: cover;
   display: block;
+}
+
+/* Landscape tile spans two columns. On desktop its image fills the height
+   the portrait tiles set for the image row. */
+.about-tile.photo.landscape { grid-column: span 2; }
+.about-tile.photo.landscape .tile-img { position: relative; }
+.about-tile.photo.landscape img {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  aspect-ratio: auto;
+  object-position: 50% 70%;
 }
 
 .about-tile figcaption,
@@ -783,6 +801,7 @@ footer.page-footer {
   .hero-grid { grid-template-columns: 1fr; gap: 1.5rem; }
   .hero-portrait { margin-top: 0; max-width: 220px; }
   .about-gallery { grid-template-columns: repeat(2, 1fr); }
+  .about-tile.photo.landscape .tile-img { aspect-ratio: 3 / 2; }
 
   /* Nav: allow horizontal scroll instead of wrapping.
      Note: -webkit-overflow-scrolling: touch was removed — iOS Safari
@@ -829,6 +848,8 @@ footer.page-footer {
   section.block > header .meta { display: none; }
   footer.page-footer { flex-direction: column; gap: 0.35rem; }
   .about-gallery { grid-template-columns: 1fr; gap: 0.75rem; }
+  .about-tile.photo.landscape { grid-column: auto; }
+  .about-tile.photo.landscape .tile-img { aspect-ratio: 4 / 3; }
 
   /* Keep nav visible below 560 and let it scroll horizontally.
      Previously hidden here when the site was one-page; /coffee added a real
