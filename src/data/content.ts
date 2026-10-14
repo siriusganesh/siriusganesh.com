@@ -122,7 +122,6 @@ export type School = {
   name: string;
   degree: string;
   detail: string;
-  when: string;
   highlightsHtml: string[];
 };
 
@@ -130,7 +129,6 @@ export const school: School = {
   name: "University of Illinois Urbana-Champaign",
   degree: "B.S. Engineering Mechanics",
   detail: "Minor, Business · Grainger College of Engineering",
-  when: "2017 — 2021",
   highlightsHtml: [
     "Dean's List, College of Engineering",
     "Research Assistant, Energy Transport Research Lab (ETRL) — Prof. Nenad Miljkovic's group",
@@ -140,7 +138,6 @@ export const school: School = {
 
 export type ResearchEntry = {
   title: string;
-  when: string;
   descriptionHtml: string;
   citation: string;
   href?: string;
@@ -151,7 +148,6 @@ export type ResearchEntry = {
 export const research: ResearchEntry[] = [
   {
     title: "Breaking Droplet Jumping Energy Conversion Limits with Superhydrophobic Microgrooves",
-    when: "SEP 2019 — MAY 2021",
     descriptionHtml: `
       Investigated how hierarchical microgrooved superhydrophobic surfaces influence
       droplet coalescence and jumping dynamics. Showed that groove structures enhance
@@ -164,7 +160,6 @@ export const research: ResearchEntry[] = [
   },
   {
     title: "Droplet Jumping: Effects of Droplet Size, Surface Structure, Pinning, and Liquid Properties",
-    when: "SEP 2019 — MAY 2021",
     descriptionHtml: `
       Developed a microdroplet visualization technique to study droplet jumping dynamics
       on nanostructured superhydrophobic, hierarchical superhydrophobic, and biphilic
@@ -178,7 +173,6 @@ export const research: ResearchEntry[] = [
   },
   {
     title: "How Superhydrophobic Grooves Drive Single-Droplet Jumping",
-    when: "SEP 2019 — MAY 2021",
     descriptionHtml: `
       Explored a novel droplet-shedding mechanism that enhances self-cleaning, anti-icing,
       water-harvesting, and heat-transfer surfaces. Using simulations and experiments,
@@ -191,7 +185,6 @@ export const research: ResearchEntry[] = [
   },
   {
     title: "Laplace Pressure Driven Single-Droplet Jumping on Structured Surfaces",
-    when: "SEP 2019 — MAY 2021",
     descriptionHtml: `
       Studied how droplets move and shed from surfaces, a process critical to biofluidics,
       anti-icing, water harvesting, and electronics cooling. Developed a novel

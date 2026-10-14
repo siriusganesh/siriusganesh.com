@@ -130,7 +130,6 @@ import {
   <section class="block" id="education">
     <header>
       <h2>Education &amp; research</h2>
-      <span class="meta">{school.when}</span>
     </header>
 
     <figure class="edu-banner">
@@ -151,7 +150,6 @@ import {
           <div class="school-degree">{school.degree}</div>
           <div class="school-detail">{school.detail}</div>
         </div>
-        <span class="when">{school.when}</span>
       </div>
       <ul class="school-highlights">
         {school.highlightsHtml.map((h) => <li set:html={h}></li>)}
@@ -163,7 +161,6 @@ import {
       <div class="research-item">
         <div class="research-head">
           <span class="research-title">{r.title}</span>
-          <span class="when">{r.when}</span>
         </div>
         <p set:html={r.descriptionHtml}></p>
         <div class="stack">{r.citation}</div>
@@ -180,7 +177,6 @@ import {
           <div class="research-item">
             <div class="research-head">
               <span class="research-title">{r.title}</span>
-              <span class="when">{r.when}</span>
             </div>
             <p set:html={r.descriptionHtml}></p>
             <div class="stack">{r.citation}</div>
