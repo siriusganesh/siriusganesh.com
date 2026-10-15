@@ -65,7 +65,7 @@ The old site is on Vercel. Once the Cloudflare Pages deployment is serving at
 ## 6. Sanity check
 
 - `https://siriusganesh.com/` loads the new site
-- `https://siriusganesh.com/Resume_SG.pdf` returns the PDF
+- `https://siriusganesh.com/Sirius-Ganesh-Resume.pdf` returns the PDF
 - View source → check `<title>` and `<meta description>` are the new ones
 - Open in phone browser, test the nav, resume link, and contact links
 
@@ -74,7 +74,7 @@ The old site is on Vercel. Once the Cloudflare Pages deployment is serving at
 ### Small change (typo, new stat, updated resume)
 
 ```bash
-# edit a file, e.g. src/data/content.ts or public/Resume_SG.pdf
+# edit a file, e.g. src/data/content.ts or public/Sirius-Ganesh-Resume.pdf
 git add -A
 git commit -m "Update resume to April 2026 version"
 git push

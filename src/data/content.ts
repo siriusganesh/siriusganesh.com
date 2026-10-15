@@ -12,7 +12,7 @@ export const profile = {
   email: "siriusganesh@outlook.com",
   linkedin: "https://www.linkedin.com/in/siriusganesh/",
   github: "https://github.com/siriusganesh",
-  resumeUrl: "/Resume_SG.pdf",
+  resumeUrl: "/Sirius-Ganesh-Resume.pdf",
 };
 
 // The hero paragraph. Inline HTML allowed.
@@ -332,5 +332,5 @@ export const contactHtml = `
   new product introduction, and customer success in robotics</strong>, especially
   at companies moving from pilot to production.
   <br /><br />
-  <a href="/Resume_SG.pdf" target="_blank" rel="noreferrer">Download resume (PDF) ↗</a>
+  <a href="/Sirius-Ganesh-Resume.pdf" target="_blank" rel="noreferrer">Download resume (PDF) ↗</a>
 `;
