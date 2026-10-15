@@ -1,0 +1,156 @@
+\documentclass[letterpaper]{article}
+\usepackage{graphicx} % Required for \scalebox
+\usepackage{bbding} % Required for \CIRCLE
+\usepackage{pifont} % Required for \ding
+\usepackage{xcolor} % Required for \textcolor
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{array} % Required for ragged p{} columns
+\usepackage{amssymb}
+\usepackage{textcomp}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[left=0.7in,right=0.7in,bottom=0.8in,top=0.8in]{geometry}
+\usepackage[hidelinks]{hyperref} % clickable links, no colored boxes
+
+\input{glyphtounicode}
+\pdfgentounicode=1
+
+\textheight=10in
+\pagestyle{empty}
+\raggedright
+
+\def\bull{\vrule height 0.8ex width .7ex depth -.1ex }
+
+% DEFINITIONS FOR RESUME %%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\area} [2] {
+    \vspace*{-9pt}
+    \begin{verse}
+        \textbf{#1}   #2
+    \end{verse}
+}
+
+\newcommand{\lineunder} {
+    \vspace*{-8pt} \\
+    \hspace*{-18pt} \hrulefill \\
+}
+
+\newcommand{\header} [1] {
+    {\hspace*{-18pt}\vspace*{6pt} \fontsize{12pt}{14pt}\selectfont\textsc{#1}}
+    \vspace*{-6pt} \lineunder
+}
+
+\newcommand{\employer} [3] {
+    { \textbf{#1} (#2)\\ \underline{\textbf{\emph{#3}}}\\  }
+}
+
+\newcommand{\contact} [3] {
+    \vspace*{-10pt}
+    \begin{center}
+        {\Huge \scshape {#1}}\\
+        #2 \\ #3
+    \end{center}
+    \vspace*{-8pt}
+}
+
+\newenvironment{achievements}{
+    \begin{list}
+        {$\bullet$}{\topsep 0pt \itemsep -2pt}}{\vspace*{4pt}
+    \end{list}
+}
+
+\newcommand{\schoolwithcourses} [4] {
+    \textbf{#1} #2 $\bullet$ #3\\
+    #4 \\
+    \vspace*{5pt}
+}
+
+\newcommand{\school} [4] {
+    \textbf{#1} #2 $\bullet$ #3\\
+    #4 \\
+}
+% END RESUME DEFINITIONS %%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\vspace*{-45pt}
+
+%==== Profile ====%
+\vspace*{-15pt}
+\begin{center}
+    {\Huge \scshape {Sirius Ganesh}}\\
+    \vspace{1mm}
+    Denver, CO \textbar\ \href{mailto:siriusganesh@outlook.com}{siriusganesh@outlook.com} \textbar\ (469) 929-1465 \textbar\ \href{https://siriusganesh.com}{siriusganesh.com}
+\end{center}
+\vspace{-2mm}
+Product operations leader directing a 17-person organization across deployment engineering, customer support, training, and customer success, with a track record of reducing deployment timelines by 85\%. Experience spanning startup robotics (Pickle Robot) and scaled AMR operations (Geek+, \$40M+ in deployments). Bridges deep technical ownership in computer vision and fleet systems with operational discipline to deliver automation programs reliably.
+\vspace{2mm}
+
+%==== Professional Experience ====%
+\header{Professional Experience}
+\vspace{0mm}
+
+\textbf{Pickle Robot Company} \hfill Denver, CO \\
+\textit{Director, Product Operations} \hfill Sep 2026 -- Present\\
+\vspace{-2mm}
+\begin{itemize} \itemsep 1pt
+    \item \textbf{Lead 17 people through 3 managers} across deployment, customer support, training, and customer success.
+    \item \textbf{Own department P\&L and unit economics}: budget, cost-to-serve, deployment margin, and renewals.
+    \item \textbf{Define customer success and fleet health metrics} and the dashboards that monitor deployed systems.
+    \item \textbf{Lead field engineering for alpha and beta programs} across 8 beta sites, turning field data into product requirements and design review input for next-generation robots.
+\end{itemize}
+\vspace{-2mm}
+\noindent \textit{Manager, Deployment Engineering} \hfill Jan 2025 -- Aug 2026\\
+\vspace{-2mm}
+\begin{itemize} \itemsep 1pt
+    \item \textbf{Managed 7 engineers} delivering \textbf{15+ robotic systems} across 9 customer sites; owned hiring and reviews.
+    \item \textbf{Reduced site deployment time from 2 weeks to 2 days} by establishing standardized deployment playbooks, networking infrastructure protocols, and customer training programs.
+\end{itemize}
+\vspace{1mm}
+
+\textbf{Geek+ Robotics} \hfill San Diego, CA \\
+\textit{Systems Consultant} \hfill Aug 2023 -- Jan 2025\\
+\vspace{-2mm}
+\begin{itemize} \itemsep 1pt
+\item \textbf{Advised clients} on deploying advanced mobile robotics solutions, including UPS Happy Returns' \textbf{first automated returns hub} (150 robots), reducing return processing times by 35\%.
+\item \textbf{Designed and executed testing strategies} for robotic fleet management systems, including RESTful API integrations and User Acceptance Testing, achieving 100\% SLA compliance.
+\item \textbf{Developed scalable SOPs and troubleshooting frameworks}, reducing system downtime by 15\% across active customer sites.
+\item \textbf{Led cross-functional collaboration} across engineering, support, and customer teams to deliver fleet management solutions from scoping through go-live.
+\end{itemize}
+\vspace{-2mm}
+\noindent \textit{Robotics Deployment Engineer} \hfill Aug 2021 -- Jul 2023\\
+\vspace{-2mm}
+\begin{itemize} \itemsep 1pt
+    \item \textbf{Directed onsite planning and scheduling} for \textbf{\$40M+} in AMR fleet deployment projects, including a \textbf{700+ robot facility} for UPS that optimized storage capacity by 30\%.
+    \item \textbf{Managed supply chain logistics, installation, and system testing}, delivering projects on schedule against stringent quality and performance benchmarks.
+    \item \textbf{Established a train-the-trainer program} for client operations teams, enabling independent fleet management and troubleshooting post-deployment.
+\end{itemize}
+\vspace{-1mm}
+
+%==== Education ====%
+\header{Education}
+\textbf{University of Illinois Urbana-Champaign}\\
+B.S. Engineering Mechanics, Minor in Business \hfill \\
+\vspace{2mm}
+
+%==== Skills ====%
+\header{Skills}
+\vspace{1mm}
+\begin{tabular}{p{2.8cm}>{\raggedright\arraybackslash}p{14.3cm}}
+    Leadership& Cross-Functional Team Management, P\&L Ownership, Stakeholder Communication, Process~Standardization, Strategic Planning, Customer Success Metrics\\
+    Robotics& Fleet Management, Computer Vision, SLAM, Edge Computing, ML Model Integration, Sensor Integration, Robotic Automation, Control \& Embedded Systems\\
+    Systems& Linux, SQL, Python, JavaScript, Git, CI, Cybersecurity, Networking, Integration and Testing\\
+    Languages& English, Tamil, Spanish, Hindi, \textit{*French, *Marathi (*elementary)}\\
+\end{tabular}
+\vspace{2mm}
+
+%==== Societies and Hobbies ====%
+\header{Societies and Hobbies}
+\vspace{1mm}
+\begin{tabular}{p{2.8cm}>{\raggedright\arraybackslash}p{14.3cm}}
+    American Mensa& Area Coordinator - Champaign County \\
+    Espresso& Built \href{https://siriusganesh.com/coffee}{siriusganesh.com/coffee} to log 250+ shots by bean, roast age, grind, and flow rate; flag prep errors, control for grind changes, and chart each bean's history.\\
+    Mountaineering& Climbing all 58 Colorado 14ers (11 completed). Built \href{https://siriusganesh.github.io/co-14ers/}{co-14ers}, a route planner with a Python scraping pipeline and a difficulty score that matches 14ers.com rankings (Spearman 0.99).\\
+\end{tabular}
+\vspace{-40mm}
+
+\end{document}
