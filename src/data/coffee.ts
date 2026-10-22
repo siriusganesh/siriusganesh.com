@@ -5200,7 +5200,7 @@ export const brews: BrewEntry[] = [
     flag: 'prep-error',
   },
   {
-    date: '2026-10-18',
+    date: '2026-10-19',
     bean: 'Sendero',
     roaster: 'La Cosecha',
     roastDate: '2026-09-15',
@@ -5214,7 +5214,7 @@ export const brews: BrewEntry[] = [
     method: 'espresso',
   },
   {
-    date: '2026-10-18',
+    date: '2026-10-19',
     bean: 'Sendero',
     roaster: 'La Cosecha',
     roastDate: '2026-09-15',
