@@ -62,7 +62,7 @@ function localToday() {
   return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local tz
 }
 
-async function getState() {
+export async function getState() {
   const mod = await loadCoffeeData();
   const { bags, brews, bagIdOf } = mod;
   const openBags = bags
@@ -229,7 +229,7 @@ export function validate(body) {
 const jobs = new Map(); // id → { log: [], status, prUrl }
 let jobSeq = 0;
 
-function newJob() {
+export function newJob() {
   const id = String(++jobSeq);
   const job = { log: [], status: 'running', prUrl: null };
   jobs.set(id, job);
@@ -287,7 +287,7 @@ function commitMessage(shots, edits = [], bagOps = []) {
   return `coffee: ${parts.join('; ')}`;
 }
 
-async function runPipeline(job, shots, edits = [], bagOps = []) {
+export async function runPipeline(job, shots, edits = [], bagOps = []) {
   const worktree = path.join('/tmp', 'shot-logger', `wt-${Date.now()}`);
   let branch = null;
   try {
@@ -442,7 +442,11 @@ async function openPrAndMerge(job, worktree, branch, msg) {
   const verdict = await waitForChecks(job, prUrl);
 
   if (verdict === 'pass') {
-    await gh(['pr', 'merge', prUrl, '--squash', '--delete-branch']);
+    // CI runs (the GitHub Pages logger) open the PR as github-actions; this
+    // keeps the squash commit authored as the repo owner.
+    const author = process.env.SHOT_LOGGER_AUTHOR_EMAIL;
+    await gh(['pr', 'merge', prUrl, '--squash', '--delete-branch',
+              ...(author ? ['--author-email', author] : [])]);
     job.status = 'merged';
     jlog(job, 'Checks green — squash-merged and deleted branch.');
     shutdownAfterMerge(job);
@@ -494,6 +498,35 @@ async function waitForChecks(job, prUrl) {
   return 'timeout';
 }
 
+/** Validate a { shots, edits, bagOps } batch. Shared by the HTTP API and
+ *  the CI entry point (ship.mjs) used by the GitHub Pages logger. */
+export function validateBatch(body) {
+  const shots = Array.isArray(body?.shots) ? body.shots : [];
+  const edits = Array.isArray(body?.edits) ? body.edits : [];
+  const bagOps = Array.isArray(body?.bagOps) ? body.bagOps : [];
+  if (!shots.length && !edits.length && !bagOps.length)
+    return { shots, edits, bagOps, errs: ['nothing submitted'] };
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  const errs = [
+    ...shots.flatMap((s, i) => validate(s).map((e) => `shot ${i + 1}: ${e}`)),
+    ...edits.flatMap((ed, i) => {
+      const out = validate(ed.entry ?? {}).map((e) => `correction ${i + 1}: ${e}`);
+      if (!Number.isInteger(ed.index) || ed.index < 0 || !ed.expect)
+        out.push(`correction ${i + 1}: bad index/expect`);
+      return out;
+    }),
+    ...bagOps.flatMap((op, i) => {
+      const out = [];
+      if (!['open', 'close', 'rebuy'].includes(op.op)) out.push(`bag change ${i + 1}: bad op`);
+      if (!op.bean) out.push(`bag change ${i + 1}: bean required`);
+      if (!dateRe.test(op.roastDate || '')) out.push(`bag change ${i + 1}: bad roastDate`);
+      if (!dateRe.test(op.date || '')) out.push(`bag change ${i + 1}: bad date`);
+      return out;
+    }),
+  ];
+  return { shots, edits, bagOps, errs };
+}
+
 // ---------------------------------------------------------------------------
 // HTTP server
 
@@ -524,30 +557,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, job);
     }
     if (req.method === 'POST' && req.url === '/api/log') {
-      const body = await readBody(req);
-      const shots = Array.isArray(body.shots) ? body.shots : [];
-      const edits = Array.isArray(body.edits) ? body.edits : [];
-      const bagOps = Array.isArray(body.bagOps) ? body.bagOps : [];
-      if (!shots.length && !edits.length && !bagOps.length)
-        return send(res, 400, { errors: ['nothing submitted'] });
-      const dateRe = /^\d{4}-\d{2}-\d{2}$/;
-      const errs = [
-        ...shots.flatMap((s, i) => validate(s).map((e) => `shot ${i + 1}: ${e}`)),
-        ...edits.flatMap((ed, i) => {
-          const out = validate(ed.entry ?? {}).map((e) => `correction ${i + 1}: ${e}`);
-          if (!Number.isInteger(ed.index) || ed.index < 0 || !ed.expect)
-            out.push(`correction ${i + 1}: bad index/expect`);
-          return out;
-        }),
-        ...bagOps.flatMap((op, i) => {
-          const out = [];
-          if (!['open', 'close', 'rebuy'].includes(op.op)) out.push(`bag change ${i + 1}: bad op`);
-          if (!op.bean) out.push(`bag change ${i + 1}: bean required`);
-          if (!dateRe.test(op.roastDate || '')) out.push(`bag change ${i + 1}: bad roastDate`);
-          if (!dateRe.test(op.date || '')) out.push(`bag change ${i + 1}: bad date`);
-          return out;
-        }),
-      ];
+      const { shots, edits, bagOps, errs } = validateBatch(await readBody(req));
       if (errs.length) return send(res, 400, { errors: errs });
       const { id, job } = newJob();
       for (const s of shots)
@@ -568,12 +578,33 @@ const server = http.createServer(async (req, res) => {
 // ---------------------------------------------------------------------------
 // UI
 
-const PAGE = /* html */ `<!doctype html>
+// Backend for the local server. The GitHub Pages build swaps this for
+// pages-api.js, which talks to the GitHub API instead; both expose the same
+// API object (state, ship, job, pollMs, optional save/load).
+const LOCAL_API = /* js */ `
+window.API = {
+  state: async () => (await fetch('/api/state')).json(),
+  ship: async (payload) => (await fetch('/api/log', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })).json(),
+  job: async (id) => (await fetch('/api/job/' + id)).json(),
+  pollMs: 3000,
+};`;
+
+const PAGES_HEAD = `<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="pages-api.js"></script>`;
+
+/** mode: 'local' (served by this process) or 'pages' (GitHub Pages build). */
+export function renderPage(mode = 'local') {
+  return /* html */ `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shot logger</title>
+${mode === 'pages' ? PAGES_HEAD : ''}
 <style>
   /* Palette and type from src/styles/global.css (the /coffee page theme). */
   :root { color-scheme: light; }
@@ -660,12 +691,12 @@ const PAGE = /* html */ `<!doctype html>
 <h2>Recent shots</h2>
 <ul id="recent"></ul>
 <div id="log"></div>
-<script>
+<script>${mode === 'pages' ? '' : LOCAL_API}
 let state;
 const $ = (id) => document.getElementById(id);
 
 async function init() {
-  state = await (await fetch('/api/state')).json();
+  state = await API.state();
   $('date').value = state.today;
   fillShotBagSelect();
   const opts = (vals) => '<option value="">—</option>' +
@@ -787,6 +818,9 @@ function renderBatch() {
   const noun = batch.every((it) => it.kind === 'log') ? 'shot' : 'change';
   $('go').textContent = \`Ship \${batch.length || ''} \${noun}\${batch.length === 1 ? '' : 's'} → PR → merge\`.replace('  ', ' ');
   fillShotBagSelect(); // queued opens may have appeared or gone
+  // Pages mode keeps the batch and any in-flight run across reloads (phone
+  // browsers drop backgrounded tabs). The local backend has no save hook.
+  API.save?.({ batch, lastShipped, jobId });
 }
 
 $('f').onsubmit = (ev) => {
@@ -825,6 +859,7 @@ $('f').onsubmit = (ev) => {
 };
 
 let lastShipped = null; // restored into the batch if the job errors
+let jobId = null;       // job in flight, if any
 
 $('bagOpSel').onchange = fillBagTargets;
 
@@ -862,12 +897,10 @@ $('go').onclick = async () => {
     bagOps: batch.filter((it) => it.kind === 'bag')
       .map(({ op, bean, roastDate, date }) => ({ op, bean, roastDate, date })),
   };
-  const r = await (await fetch('/api/log', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })).json();
+  const r = await API.ship(payload);
   if (r.errors) { alert(r.errors.join('\\n')); return; }
   lastShipped = batch.slice();
+  jobId = r.jobId;
   batch.length = 0;
   renderBatch();
   $('go').disabled = true;
@@ -878,9 +911,10 @@ async function poll(id) {
   const el = $('log');
   el.style.display = 'block';
   const t = setInterval(async () => {
-    const j = await (await fetch('/api/job/' + id)).json();
+    const j = await API.job(id);
     el.innerHTML = j.log.join('\\n') +
       (j.prUrl ? \`\\n<a href="\${j.prUrl}" target="_blank">\${j.prUrl}</a>\` : '') +
+      (j.runUrl ? \`\\n<a href="\${j.runUrl}" target="_blank">workflow run</a>\` : '') +
       \`\\n<span class="status-\${j.status}">status: \${j.status}</span>\`;
     if (j.status !== 'running') {
       clearInterval(t);
@@ -889,18 +923,29 @@ async function poll(id) {
         batch.push(...lastShipped);
       }
       lastShipped = null;
+      jobId = null;
       renderBatch();
       $('go').disabled = batch.length === 0;
       init(); // refresh state so recent shots reflect the merge
     }
-  }, 3000);
+  }, API.pollMs);
 }
 
 $('cancelEdit').onclick = endEdit;
-init();
+init().then(() => {
+  const saved = API.load?.();
+  if (!saved) return;
+  if (saved.jobId) { lastShipped = saved.lastShipped; jobId = saved.jobId; }
+  batch.push(...(saved.batch || []));
+  renderBatch();
+  if (jobId) { $('go').disabled = true; poll(jobId); }
+});
 </script>
 </body>
 </html>`;
+}
+
+const PAGE = renderPage('local');
 
 // Only start listening when run directly (not when imported by tests).
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

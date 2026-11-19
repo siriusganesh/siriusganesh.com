@@ -1,0 +1,109 @@
+name: Shot logger
+
+# Two jobs in one workflow:
+# - ship: dispatched by the GitHub Pages shot logger with a batch of shots,
+#   corrections, and bag changes. Runs tools/shot-logger/ship.mjs, which uses
+#   the local app's pipeline (branch, PR, wait for checks, squash-merge).
+# - build-page + deploy: publish the logger page and its state.json snapshot.
+#   Runs after every ship that merged (merges by GITHUB_TOKEN do not trigger
+#   push workflows) and on any other push to main that touches the log.
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('shot-log {0}', inputs.request_id) || 'shot logger page deploy' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch:
+        description: Batch JSON from the shot logger page
+        required: true
+      request_id:
+        description: Client id the page uses to find this run
+        required: true
+  push:
+    branches: [main]
+    paths:
+      - src/data/coffee.ts
+      - tools/shot-logger/**
+      - .github/workflows/shot-logger.yml
+
+permissions: {}
+
+jobs:
+  ship:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    concurrency:
+      group: shot-logger-ship
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+      statuses: read
+    env:
+      TZ: America/Denver
+      GH_TOKEN: ${{ github.token }}
+      SHOT_LOGGER_AUTHOR_EMAIL: siriusganesh@outlook.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "siriusganesh"
+          git config --global user.email "siriusganesh@outlook.com"
+
+      # The batch goes in through env, never interpolated into the script.
+      - name: Ship batch
+        id: ship
+        env:
+          BATCH: ${{ inputs.batch }}
+        run: node tools/shot-logger/ship.mjs
+
+      - name: Merge gate
+        if: steps.ship.outputs.status != 'merged'
+        env:
+          STATUS: ${{ steps.ship.outputs.status }}
+        run: |
+          echo "PR not merged (status: $STATUS). The run summary has the PR link."
+          exit 1
+
+  build-page:
+    needs: ship
+    if: always() && (github.event_name == 'push' || needs.ship.result == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build page
+        run: node tools/shot-logger/build-pages.mjs _site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build-page
+    if: always() && needs.build-page.result == 'success'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: shot-logger-pages
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
