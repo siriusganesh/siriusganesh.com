@@ -5,7 +5,8 @@
 // server uses (worktree from origin/main, branch, PR, wait for checks,
 // squash-merge on green), then reports through the workflow:
 //   - exit 1: batch rejected or failed before merging (status "error");
-//   - exit 0 with output status=merged | checks-failed | timeout; the
+//   - exit 0 with output status=merged | checks-failed | timeout | pr-open
+//     (failed after the PR opened, e.g. at the merge call); the
 //     workflow's "Merge gate" step fails the run for anything but merged.
 import { appendFile } from 'node:fs/promises';
 import { validateBatch, newJob, runPipeline } from './server.mjs';
@@ -34,5 +35,9 @@ if (errs.length) {
 
 const { job } = newJob();
 await runPipeline(job, shots, edits, bagOps);
-await report([...job.log, ...(job.prUrl ? [job.prUrl] : []), `status: ${job.status}`], job.status);
-process.exit(job.status === 'error' ? 1 : 0);
+// An error after the PR opened means the batch is already in that PR: report
+// it as pr-open (merge gate fails, page keeps the batch out of the queue)
+// rather than error (page re-queues the batch, which would duplicate it).
+const status = job.status === 'error' && job.prUrl ? 'pr-open' : job.status;
+await report([...job.log, ...(job.prUrl ? [job.prUrl] : []), `status: ${status}`], status);
+process.exit(status === 'error' ? 1 : 0);
