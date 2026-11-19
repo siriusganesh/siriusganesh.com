@@ -131,7 +131,7 @@
     const box = document.createElement('details');
     box.style.marginTop = '2.2rem';
     box.innerHTML =
-      '<summary style="font-size:.9rem;color:#303130;cursor:pointer">GitHub token</summary>' +
+      '<summary class="h2" style="margin-top:0">GitHub token</summary>' +
       '<p style="font-size:.8rem;color:#616160">Fine-grained token, repository ' + REPO +
       ' only, permission Actions: read and write. Stored in this browser only.</p>' +
       '<input id="ghToken" type="password" autocomplete="off" placeholder="github_pat_...">' +
@@ -139,7 +139,7 @@
       '<button id="ghSave" type="button" class="secondary">Save token</button>' +
       '<button id="ghClear" type="button" class="secondary">Remove token</button></div>' +
       '<p id="ghStatus" style="font-size:.8rem;color:#616160"></p>';
-    document.body.appendChild(box);
+    (document.querySelector('main') || document.body).appendChild(box);
     const status = () => {
       const has = !!store.get(K_TOKEN);
       document.getElementById('ghStatus').textContent = has ? 'Token saved.' : 'No token saved.';
