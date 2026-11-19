@@ -43,7 +43,8 @@ jobs:
     env:
       TZ: America/Denver
       GH_TOKEN: ${{ github.token }}
-      SHOT_LOGGER_AUTHOR_EMAIL: siriusganesh@outlook.com
+      # Squash would make github-actions (the PR opener) the commit author.
+      SHOT_LOGGER_MERGE: rebase
     steps:
       - uses: actions/checkout@v4
 

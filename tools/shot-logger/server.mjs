@@ -442,11 +442,11 @@ async function openPrAndMerge(job, worktree, branch, msg) {
   const verdict = await waitForChecks(job, prUrl);
 
   if (verdict === 'pass') {
-    // CI runs (the GitHub Pages logger) open the PR as github-actions; this
-    // keeps the squash commit authored as the repo owner.
-    const author = process.env.SHOT_LOGGER_AUTHOR_EMAIL;
-    await gh(['pr', 'merge', prUrl, '--squash', '--delete-branch',
-              ...(author ? ['--author-email', author] : [])]);
+    // CI runs (the GitHub Pages logger) open the PR as github-actions, and a
+    // squash commit takes the PR opener as its author. A rebase merge of the
+    // single commit keeps the commit's own author (the repo owner) instead.
+    const method = process.env.SHOT_LOGGER_MERGE === 'rebase' ? '--rebase' : '--squash';
+    await gh(['pr', 'merge', prUrl, method, '--delete-branch']);
     job.status = 'merged';
     jlog(job, 'Checks green — squash-merged and deleted branch.');
     shutdownAfterMerge(job);
