@@ -602,41 +602,58 @@ export function renderPage(mode = 'local') {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Shot logger</title>
 ${mode === 'pages' ? PAGES_HEAD : ''}
 <style>
   /* Palette and type from src/styles/global.css (the /coffee page theme). */
   :root { color-scheme: light; }
+  html { -webkit-text-size-adjust: 100%; }
+  /* Phone first: 16px side gutter plus the notch/home-bar safe areas. */
   body { font: 15px/1.6 Verdana, Geneva, "DejaVu Sans", sans-serif; background: #ffffff;
-         color: #111113; max-width: 34rem; margin: 2rem auto; padding: 0 1rem; }
+         color: #111113; max-width: 34rem; margin: 0 auto;
+         padding: max(1rem, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+                  max(2rem, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   h1 { font-size: 1.15rem; color: #303130; }
   h1 .accent { color: #990000; }
-  h2 { font-size: .9rem; color: #303130; margin-top: 2.2rem; }
+  h2, summary.h2 { font-size: .9rem; font-weight: 700; color: #303130; margin-top: 2.2rem; }
+  summary.h2 { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
   label { display: block; margin-top: .8rem; font-size: .7rem; color: #717270;
           text-transform: uppercase; letter-spacing: .06em; }
+  /* 16px minimum: iOS Safari zooms the page into any smaller focused field.
+     44px minimum height: touch target size. */
   input, select, textarea { width: 100%; box-sizing: border-box; margin-top: .25rem;
-          padding: .45rem .6rem; background: #f7f7f4; color: #111113;
+          min-height: 44px; padding: .5rem .6rem; background: #f7f7f4; color: #111113;
           border: 1px solid #e4e4df; border-radius: 4px;
-          font: 14px/1.5 "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; }
+          font: 16px/1.5 "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; }
   input:focus, select:focus, textarea:focus { outline: 2px solid #dbe3f5; border-color: #91928f; }
-  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .8rem; }
-  .check { display: flex; align-items: center; gap: .5rem; margin-top: 1rem; }
+  /* minmax(0, 1fr): let columns shrink below their content width, so a long
+     select option cannot push the row wider than the screen. */
+  .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+  .check { display: flex; align-items: center; gap: .5rem; margin-top: 1rem; min-height: 44px; }
   .check input { width: auto; margin: 0; }
-  .check label { margin: 0; text-transform: none; letter-spacing: 0; font-size: .9rem; color: #111113; }
-  button { margin-top: 1.2rem; width: 100%; padding: .6rem; font: inherit; font-weight: 700;
-          background: #011f5b; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+  .check input[type=checkbox] { width: 22px; height: 22px; min-height: 0; }
+  .check label { margin: 0; padding: .6rem 0; text-transform: none; letter-spacing: 0; font-size: .9rem; color: #111113; }
+  button { margin-top: 1.2rem; width: 100%; min-height: 48px; padding: .6rem; font: inherit;
+          font-weight: 700; background: #011f5b; color: #fff; border: 0; border-radius: 4px;
+          cursor: pointer; touch-action: manipulation; }
+  :focus-visible { outline: 2px solid #011f5b; outline-offset: 2px; }
   button:hover:not(:disabled) { background: #001541; }
   button:disabled { opacity: .45; cursor: default; }
   button.secondary { background: #dbe3f5; color: #011f5b; }
   button.secondary:hover:not(:disabled) { background: #c9d5ef; }
   #editing { margin-top: 1rem; padding: .5rem .7rem; background: #fbe5e5; border: 1px solid #990000;
              border-radius: 4px; font-size: .85rem; }
-  #editing a { color: #990000; cursor: pointer; text-decoration: underline; }
+  #editing a { color: #990000; cursor: pointer; text-decoration: underline;
+               display: inline-block; padding: .6rem 0; }
   #batch, #recent { list-style: none; padding: 0; margin: 1rem 0 0; }
-  #batch li, #recent li { display: flex; justify-content: space-between; gap: .6rem; padding: .35rem .6rem;
+  #batch li, #recent li { display: flex; justify-content: space-between; align-items: center;
+              gap: .6rem; padding: .35rem .6rem;
               background: #f7f7f4; border: 1px solid #e4e4df; border-radius: 4px; margin-top: .4rem;
               font: 12.5px/1.5 "IBM Plex Mono", ui-monospace, monospace; }
+  /* Row actions: 44px tap area without changing the row's look. */
+  #batch a, #recent a { flex: none; min-width: 44px; min-height: 44px; display: flex;
+              align-items: center; justify-content: flex-end; margin: -.35rem 0; }
   #batch a { color: #990000; text-decoration: none; cursor: pointer; }
   #recent a { color: #011f5b; text-decoration: none; cursor: pointer; }
   #log { margin-top: 1.2rem; padding: .8rem; background: #f7f7f4; border: 1px solid #e4e4df;
@@ -648,49 +665,54 @@ ${mode === 'pages' ? PAGES_HEAD : ''}
 </style>
 </head>
 <body>
+<main>
 <h1>Shot logger<span class="accent">.</span></h1>
 <div id="editing" hidden>Editing <span id="editWhat"></span> — <a id="cancelEdit">cancel</a></div>
 <form id="f">
-  <label>Bag</label>
+  <label for="bag">Bag</label>
   <select id="bag"></select>
   <div class="row">
-    <div><label>Dose g</label><input id="doseG" type="number" step="0.1" required></div>
-    <div><label>Yield g</label><input id="yieldG" type="number" step="0.1" required></div>
-    <div><label>Time s</label><input id="timeS" type="number" step="1" required></div>
+    <!-- inputmode: decimal pad (digits + dot) for grams, digit pad for seconds. -->
+    <div><label for="doseG">Dose g</label><input id="doseG" type="number" inputmode="decimal" step="0.1" min="0" autocomplete="off" required></div>
+    <div><label for="yieldG">Yield g</label><input id="yieldG" type="number" inputmode="decimal" step="0.1" min="0" autocomplete="off" required></div>
+    <div><label for="timeS">Time s</label><input id="timeS" type="number" inputmode="numeric" pattern="[0-9]*" step="1" min="0" autocomplete="off" required></div>
   </div>
   <div class="row">
-    <div><label>Grind</label><select id="grind"></select></div>
-    <div><label>Basket</label><select id="basket"></select></div>
-    <div><label>Temp</label><select id="temp"></select></div>
+    <div><label for="grind">Grind</label><select id="grind"></select></div>
+    <div><label for="basket">Basket</label><select id="basket"></select></div>
+    <div><label for="temp">Temp</label><select id="temp"></select></div>
   </div>
-  <label>Flag</label>
+  <label for="flag">Flag</label>
   <select id="flag"><option value="">none</option>
     <option value="dial-in">dial-in</option>
     <option value="process-error">process-error</option>
     <option value="prep-error">prep-error</option>
   </select>
-  <label>Notes</label>
+  <label for="notes">Notes</label>
   <textarea id="notes" rows="2"></textarea>
   <div class="check"><input id="puckScreen" type="checkbox" checked><label for="puckScreen">Puck screen</label></div>
   <div class="check"><input id="date" type="date" style="width:auto"><label for="date">Brew date</label></div>
   <button id="add" type="submit" class="secondary">Add shot to batch</button>
 </form>
-<h2>Bags</h2>
+<ul id="batch" aria-live="polite"></ul>
+<button id="go" disabled>Ship batch → PR → merge</button>
+<div id="log" role="status" aria-live="polite"></div>
+<details id="bagsBox">
+<summary class="h2">Bags</summary>
 <div class="row">
-  <div><label>Action</label><select id="bagOpSel">
+  <div><label for="bagOpSel">Action</label><select id="bagOpSel">
     <option value="open">open</option>
     <option value="close">close</option>
     <option value="rebuy">re-add (new roast)</option>
   </select></div>
-  <div><label>Bag</label><select id="bagTarget"></select></div>
-  <div><label id="bagDateLabel">Date</label><input id="bagDate" type="date"></div>
+  <div><label for="bagTarget">Bag</label><select id="bagTarget"></select></div>
+  <div><label for="bagDate" id="bagDateLabel">Date</label><input id="bagDate" type="date"></div>
 </div>
 <button id="addBag" type="button" class="secondary">Add bag change to batch</button>
-<ul id="batch"></ul>
-<button id="go" disabled>Ship batch → PR → merge</button>
+</details>
 <h2>Recent shots</h2>
 <ul id="recent"></ul>
-<div id="log"></div>
+</main>
 <script>${mode === 'pages' ? '' : LOCAL_API}
 let state;
 const $ = (id) => document.getElementById(id);
@@ -707,6 +729,7 @@ async function init() {
   $('bag').onchange = fill;
   $('bagDate').value = state.today;
   fillBagTargets();
+  if (!state.bags.length) $('bagsBox').open = true; // no open bag: shots need one first
   renderRecent();
   if (!editing) fill();
 }
@@ -773,6 +796,10 @@ function startEdit(index) {
   $('editing').hidden = false;
   $('bag').disabled = true; // bean identity stays with the original entry
   $('add').textContent = 'Add correction to batch';
+  // On a phone the recent list is far below the form.
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $('editing').scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' });
+  $('yieldG').focus({ preventScroll: true });
 }
 
 function endEdit() {
@@ -839,6 +866,7 @@ $('f').onsubmit = (ev) => {
     batch.push({ kind: 'edit', index: editing.index, entry, expect });
     endEdit();
     renderBatch();
+    showBatch();
     return;
   }
   const b = shotBags()[+$('bag').value];
@@ -856,7 +884,16 @@ $('f').onsubmit = (ev) => {
   // Keep dose/grind/basket/temp for the next pull; clear the per-shot fields.
   $('yieldG').value = ''; $('timeS').value = ''; $('notes').value = ''; $('flag').value = '';
   renderBatch();
+  showBatch();
 };
+
+// After an add, close the phone keyboard and bring the batch and the ship
+// button into view, so the added item is visible feedback.
+function showBatch() {
+  document.activeElement?.blur();
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $('go').scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'nearest' });
+}
 
 let lastShipped = null; // restored into the batch if the job errors
 let jobId = null;       // job in flight, if any
@@ -932,6 +969,9 @@ async function poll(id) {
 }
 
 $('cancelEdit').onclick = endEdit;
+addEventListener('beforeunload', (ev) => {
+  if (!API.save && (batch.length || jobId)) ev.preventDefault();
+});
 init().then(() => {
   const saved = API.load?.();
   if (!saved) return;
