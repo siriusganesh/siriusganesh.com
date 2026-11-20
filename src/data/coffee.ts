@@ -6019,6 +6019,20 @@ export const brews: BrewEntry[] = [
     puckScreen: true,
     method: 'espresso',
   },
+  {
+    date: '2026-11-20',
+    bean: 'Mexico',
+    roaster: 'La Cosecha',
+    roastDate: '2026-10-20',
+    doseG: 15.5,
+    yieldG: 38.3,
+    timeS: 24,
+    grind: 'DF64 #6',
+    basket: 'DEX 15g',
+    temp: 'Mid',
+    puckScreen: true,
+    method: 'espresso',
+  },
 ];
 
 // Helpers used by the page. Kept here so the page file stays about layout.
