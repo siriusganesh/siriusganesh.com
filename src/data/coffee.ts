@@ -453,6 +453,18 @@ export const bags: Bag[] = [
     certifications: ['Organic'],
     chartColor: '#4d7a2a',
   },
+  {
+    bean: 'Merry & Bright',
+    roaster: 'La Cosecha',
+    roastDate: '2026-11-24',
+    specialRelease: true,
+    type: 'blend',
+    roastLevel: 'medium',
+    origin: 'Mexico + Guatemala',
+    tastingNotes: ['dark chocolate', 'honey graham', 'fig'],
+    elevation: '1,200–2,200 MASL',
+    chartColor: '#8e1f35',
+  },
 ];
 
 // Derived views. activeBeans = bags currently being brewed (drives the
