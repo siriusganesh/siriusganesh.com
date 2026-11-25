@@ -465,6 +465,17 @@ export const bags: Bag[] = [
     elevation: '1,200–2,200 MASL',
     chartColor: '#8e1f35',
   },
+  {
+    bean: 'Mokha Java',
+    roaster: 'La Cosecha',
+    roastDate: '2026-11-17',
+    specialRelease: true,
+    type: 'blend',
+    roastLevel: 'medium',
+    origin: 'Papua New Guinea + Ethiopia',
+    tastingNotes: ['fig', 'dried raspberry', 'dark chocolate'],
+    chartColor: '#3a73a8',
+  },
 ];
 
 // Derived views. activeBeans = bags currently being brewed (drives the
